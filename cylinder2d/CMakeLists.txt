@@ -4,6 +4,7 @@ project(palabosExample)
 enable_language(CXX)
 
 set(EXECUTABLE_NAME "cylinder2d")
+set(MODIFIED_EXECUTABLE_NAME "guocylinder2d")
 set(PALABOS_SOURCE_REPO "/home/anoldfriend/Workspace/MyRepo/palabos")
 message("PALABOS_SOURCE_REPO:" ${PALABOS_SOURCE_REPO})
 
@@ -91,10 +92,16 @@ LINK_DIRECTORIES(${PALABOS_LIB_DIRECTORY})
 
 message("PALABOS_LIB_DIRECTORY:" ${PALABOS_LIB_DIRECTORY})
 
-add_executable(${EXECUTABLE_NAME} "./${EXECUTABLE_NAME}.cpp")
+# ###############################################################################
+# # Execution
+# ###############################################################################
 
+add_executable(${EXECUTABLE_NAME} "./${EXECUTABLE_NAME}.cpp")
+add_executable(${MODIFIED_EXECUTABLE_NAME} "./${MODIFIED_EXECUTABLE_NAME}.cpp")
 # Link with the following libraries
 target_link_libraries(${EXECUTABLE_NAME} ${PALABOS_LIB_NAME})
+target_link_libraries(${MODIFIED_EXECUTABLE_NAME} ${PALABOS_LIB_NAME})
 if(ENABLE_MPI)
     target_link_libraries(${EXECUTABLE_NAME} ${MPI_CXX_LIBRARIES})
+    target_link_libraries(${MODIFIED_EXECUTABLE_NAME} ${MPI_CXX_LIBRARIES})
 endif()

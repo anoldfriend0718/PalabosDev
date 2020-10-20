@@ -64,7 +64,7 @@ T poiseuillePressure(plint iX, IncomprFlowParam<T> const &parameters) {
   T Lx = parameters.getNx() - 1;
   T Ly = parameters.getNy() - 1;
   return 8. * parameters.getLatticeNu() * parameters.getLatticeU() / (Ly * Ly) *
-         (Lx / (T)2 - (T)iX);
+         (Lx - (T)iX);
 }
 
 /// Convert pressure to density according to ideal gas law
