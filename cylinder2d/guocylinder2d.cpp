@@ -96,22 +96,6 @@ private:
   T density;
 };
 
-/// A functional, used to create an initial condition for the density and
-/// velocity
-template <typename T> class PoiseuilleVelocityAndDensity {
-public:
-  PoiseuilleVelocityAndDensity(IncomprFlowParam<T> parameters_)
-      : parameters(parameters_) {}
-  void operator()(plint iX, plint iY, T &rho, Array<T, 2> &u) const {
-    rho = poiseuilleDensity(iX, parameters);
-    u[0] = poiseuilleVelocity(iY, parameters);
-    u[1] = T();
-  }
-
-private:
-  IncomprFlowParam<T> parameters;
-};
-
 template <typename T> class ConstantVelocityAndPoiseuilleDensity {
 public:
   ConstantVelocityAndPoiseuilleDensity(IncomprFlowParam<T> parameters_)
@@ -152,17 +136,23 @@ void cylinderSetup(
   const plint nx = parameters.getNx();
   const plint ny = parameters.getNy();
 
-  // create the periodicity in the upper and bottom boundary
-  lattice.periodicity().toggle(1, true);
+  // // create the periodicity in the upper and bottom boundary
+  // lattice.periodicity().toggle(1, true);
 
   // Create Velocity boundary conditions: inlet
-  boundaryCondition.setVelocityConditionOnBlockBoundaries(
-      lattice, Box2D(0, 0, 0, ny - 1));
+  Box2D inlet(0, 0, 0, ny - 1);
+  boundaryCondition.setVelocityConditionOnBlockBoundaries(lattice, inlet);
   // .. except on right boundary, where we prefer an outflow condition
   //    (zero velocity-gradient).
   Box2D outlet(nx - 1, nx - 1, 0, ny - 1);
   boundaryCondition.setVelocityConditionOnBlockBoundaries(lattice, outlet,
                                                           boundary::outflow);
+  Box2D top(1, nx - 2, ny - 1, ny - 1);
+  boundaryCondition.setVelocityConditionOnBlockBoundaries(lattice, top,
+                                                          boundary::freeslip);
+  Box2D bottom(1, nx - 2, 0, 0);
+  boundaryCondition.setVelocityConditionOnBlockBoundaries(lattice, bottom,
+                                                          boundary::freeslip);
 
   const Array<T, 2> inletVelocity = {parameters.getLatticeU(), T()};
   setBoundaryVelocity(lattice, lattice.getBoundingBox(), inletVelocity);
@@ -170,9 +160,11 @@ void cylinderSetup(
   initializeAtEquilibrium(lattice, lattice.getBoundingBox(),
                           ConstantVelocityAndPoiseuilleDensity<T>(parameters));
 
-  plint cx = nx / 14 * 2.5; // cy=75
+  plint cx = nx / 14 * 2.5; // cx=75
   plint cy = ny / 2;        // cy=105
-  plint radius = cy / 14;   // r=5
+  plint radius = ny / 14;   // r=15
+
+  pcout << "cx: " << cx << "cy: " << cy << "radius: " << radius << endl;
   defineDynamics(lattice, lattice.getBoundingBox(),
                  new CylinderShapeDomain2D<T>(cx, cy, radius),
                  new plb::BounceBack<T, DESCRIPTOR>);
@@ -229,21 +221,35 @@ void writeField(const string outputDir,
 
 int main(int argc, char *argv[]) {
   plbInit(&argc, &argv);
-
+  global::timer("simTime").start();
   const string outputDir = "./tmpguo/";
   global::directories().setOutputDir(outputDir);
 
-  IncomprFlowParam<T> parameters((T)1e-2, // uMax
-                                 (T)10.,  // Re
-                                 210,     // N
-                                 2.,      // lx
-                                 1.       // ly
+  // guo parameter
+  T re = 40; // re=U*D*v
+  T omega = 1.2;
+  T tau = 1.0 / omega;
+  T visco = (tau - 0.5) / 3.0;
+  plint diameter = 30;
+  T uo = re * visco / diameter;
+
+  // palabos parameters
+  plint pl_resolution = 210;
+  T pl_re = pl_resolution * uo / visco;
+
+  IncomprFlowParam<T> parameters(uo,            // uMax
+                                 pl_re,         // Re
+                                 pl_resolution, // N
+                                 2.,            // lx
+                                 1.             // ly
   );
-  const T logT = (T)0.02;
+  const T logT = (T)0.1;
   const T imSave = (T)0.1;
+  const T residualAnalysis = (T)0.1;
+  const plint residualAnalysisIter = parameters.nStep(residualAnalysis);
   const T vtkSave = (T)1.;
   const T filedSave = T(1.);
-  const T maxT = (T)3.1;
+  const T maxT = (T)10;
 
   writeLogFile(parameters, "Poiseuille flow");
 
@@ -255,9 +261,23 @@ int main(int argc, char *argv[]) {
       createLocalBoundaryCondition2D<T, DESCRIPTOR>();
 
   cylinderSetup(lattice, parameters, *boundaryCondition);
+  T convergeThreshold = 1e-6;
+  // util::ValueTracer<T> converge(parameters.getLatticeU() *
+  // residualAnalysisIter,
+  //                               parameters.getNy() - 1, convergeThreshold);
 
+  util::ValueTracer<T> converge(1, 10, convergeThreshold);
+  pcout << "value tracer delta T (LB): " << converge.getDeltaT() << endl;
+
+  T tIni = global::timer("simTime").stop();
   // Main loop over time iterations.
-  for (plint iT = 0; iT * parameters.getDeltaT() < maxT; ++iT) {
+  plint iT = 0;
+  MultiScalarField2D<T> previousVelNorm(parameters.getNx(), parameters.getNy());
+  MultiScalarField2D<T> latestVelNorm(parameters.getNx(), parameters.getNy());
+  plint totalCell = parameters.getNx() * parameters.getNy();
+
+  for (iT = 0; iT * parameters.getDeltaT() < maxT; ++iT) {
+
     // At this point, the state of the lattice corresponds to the
     //   discrete time iT. However, the stored averages
     //   (getStoredAverageEnergy and getStoredAverageDensity) correspond to
@@ -277,9 +297,28 @@ int main(int argc, char *argv[]) {
       pcout << "Saving filed text file..." << endl;
       writeField(outputDir, lattice, parameters, iT);
     }
+    if (iT % residualAnalysisIter == residualAnalysisIter - 1) {
+      computeVelocityNorm(lattice, previousVelNorm, lattice.getBoundingBox());
+    }
+
+    if (iT % residualAnalysisIter == 0 && iT > 0) {
+      computeVelocityNorm(lattice, latestVelNorm, lattice.getBoundingBox());
+      std::unique_ptr<MultiScalarField2D<T>> residual =
+          subtract(latestVelNorm, previousVelNorm);
+      divideInPlace(*residual, *add(latestVelNorm, 1e-6));
+      T error = sqrt(computeSum(
+                    *computePower(*residual, 2., lattice.getBoundingBox()))) /
+                totalCell;
+      converge.takeValue(error, true);
+    }
 
     if (iT % parameters.nStep(logT) == 0) {
       pcout << "step " << iT << "; t=" << iT * parameters.getDeltaT();
+    }
+
+    if (converge.hasConverged()) {
+      pcout << "simulation is converaged" << endl;
+      break;
     }
 
     // Lattice Boltzmann iteration step.
@@ -293,6 +332,17 @@ int main(int argc, char *argv[]) {
             << "; av rho =" << getStoredAverageDensity<T>(lattice) << endl;
     }
   }
+
+  writeGif(lattice, iT);
+  writeVTK(lattice, parameters, iT);
+  writeField(outputDir, lattice, parameters, iT);
+
+  T tEnd = global::timer("simTime").stop();
+  T totalTime = tEnd - tIni;
+  pcout << "number of processors: " << global::mpi().getSize() << endl;
+  pcout << "total iteraction step: " << iT << endl;
+  pcout << "total cpu clock time for all steps: " << tEnd << endl;
+  pcout << "total cpu clock time for collision&stream: " << totalTime << endl;
 
   delete boundaryCondition;
 }

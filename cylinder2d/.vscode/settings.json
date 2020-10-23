@@ -80,7 +80,8 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "svd": "cpp"
     },
     "python.pythonPath": "/usr/bin/python3",
 
