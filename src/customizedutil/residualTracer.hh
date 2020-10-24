@@ -2,18 +2,13 @@
 #define RESIDUAL_TRACER_HH
 
 #include "core/globalDefs.h"
-#include "core/util.h"
 #include "customizedutil/residualTracer.h"
 #include "dataProcessors/dataAnalysisWrapper2D.h"
 #include "dataProcessors/dataAnalysisWrapper2D.hh"
 #include "io/parallelIO.h"
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <iostream>
-#include <numeric>
-#include <sstream>
-#include <string>
 
 namespace plb {
 
@@ -22,28 +17,25 @@ namespace util {
 /////////// Class ResidualTracer2D ////////////////////////
 
 template <typename T>
-ResidualTracer2D<T>::ResidualTracer2D(T u, T L, plint _nx, plint _ny,
+ResidualTracer2D<T>::ResidualTracer2D(plint _count, plint _nx, plint _ny,
                                       T _epsilon)
-    : deltaT((plint)(L / u / 2.)), epsilon(_epsilon), nx(_nx), ny(_ny), t(0),
-      converged(false), absoluteResidual(MultiScalarField2D<T>(_nx, _ny, 0.0)) {
-}
-
-template <typename T> plint ResidualTracer2D<T>::getDeltaT() const {
-  return deltaT;
-}
+    : count(std::abs(_count)), epsilon(_epsilon), nx(_nx), ny(_ny), t(0),
+      converged(false),
+      absoluteResidualField(MultiScalarField2D<T>(_nx, _ny, 0.0)) {}
 
 template <typename T>
 void ResidualTracer2D<T>::measure(MultiScalarField2D<T> &currentField,
                                   MultiScalarField2D<T> &previousField,
                                   Box2D &domain, bool doPrint) {
-  subtract(currentField, previousField, absoluteResidual, domain);
-  T relativeError = computeSum(*computePower(absoluteResidual, 2.0, domain)) /
-                    computeSum(*computePower(currentField, 2.0, domain));
+  subtract(currentField, previousField, absoluteResidualField, domain);
+  T relativeError =
+      computeSum(*computePower(absoluteResidualField, 2.0, domain)) /
+      computeSum(*computePower(currentField, 2.0, domain));
 
-  values.push_back(relativeError);
-  if ((plint)values.size() > std::abs(deltaT)) {
-    values.erase(values.begin());
-    if (doPrint && t % deltaT == 0) {
+  relativeErrors.push_back(relativeError);
+  if ((plint)relativeErrors.size() > count) {
+    relativeErrors.erase(relativeErrors.begin());
+    if (doPrint && t % count == 0) {
       T average = computeAverage();
       pcout << "average relative error=" << average << std::endl;
     }
@@ -51,23 +43,26 @@ void ResidualTracer2D<T>::measure(MultiScalarField2D<T> &currentField,
   ++t;
 }
 
-template <typename T> void ResidualTracer2D<T>::resetScale(T u, T L) {
-  t = t % deltaT;
-  deltaT = (plint)(L / u / 2.);
-  if ((plint)values.size() > std::abs(deltaT)) {
-    values.erase(values.begin(), values.begin() + (values.size() - deltaT));
+template <typename T> void ResidualTracer2D<T>::resetCount(plint _count) {
+  t = t % count;
+  count = std ::abs(_count);
+  if ((plint)relativeErrors.size() > count) {
+    relativeErrors.erase(relativeErrors.begin(),
+                         relativeErrors.begin() +
+                             (relativeErrors.size() - count));
   }
 }
 
 template <typename T> void ResidualTracer2D<T>::resetValues() {
   t = 0;
-  if ((plint)values.size() > 0) {
-    values.erase(values.begin(), values.begin() + values.size());
+  if ((plint)relativeErrors.size() > 0) {
+    relativeErrors.erase(relativeErrors.begin(),
+                         relativeErrors.begin() + relativeErrors.size());
   }
 }
 
 template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
-  if ((plint)values.size() < std::abs(deltaT)) {
+  if ((plint)relativeErrors.size() < count) {
     return false;
   } else {
     T average = computeAverage();
@@ -76,7 +71,8 @@ template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
       if (!isConvergence) {
         return false;
       }
-      pcout << "simulation is converged with the average residual error: "
+      pcout << std::endl
+            << "simulation is converged with the average residual error: "
             << average << std::endl;
       return true;
     }
@@ -89,7 +85,8 @@ template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
 }
 
 template <typename T> T ResidualTracer2D<T>::computeAverage() const {
-  return accumulate(values.begin(), values.end(), 0.) / values.size();
+  return accumulate(relativeErrors.begin(), relativeErrors.end(), 0.) /
+         relativeErrors.size();
 }
 
 template <typename T> void ResidualTracer2D<T>::setEpsilon(T epsilon_) {
