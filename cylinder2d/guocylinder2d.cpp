@@ -37,7 +37,8 @@
  * describe the shape of the cylinder. The outlet is modeled through a
  * Neumann (zero velocity-gradient) condition.
  */
-
+#include "customizedutil/residualTracer.h"
+#include "customizedutil/residualTracer.hh"
 #include "palabos2D.h"
 #include "palabos2D.hh"
 #include <cmath>
@@ -261,20 +262,18 @@ int main(int argc, char *argv[]) {
       createLocalBoundaryCondition2D<T, DESCRIPTOR>();
 
   cylinderSetup(lattice, parameters, *boundaryCondition);
-  T convergeThreshold = 1e-6;
-  // util::ValueTracer<T> converge(parameters.getLatticeU() *
-  // residualAnalysisIter,
-  //                               parameters.getNy() - 1, convergeThreshold);
 
-  util::ValueTracer<T> converge(1, 10, convergeThreshold);
-  pcout << "value tracer delta T (LB): " << converge.getDeltaT() << endl;
+  plint nx = parameters.getNx();
+  plint ny = parameters.getNy();
+  T convergeThreshold = 1e-6;
+  util::ResidualTracer2D<T> residualTracer(1, 10, nx, ny, convergeThreshold);
+  MultiScalarField2D<T> previousVelNorm(nx, ny);
+  MultiScalarField2D<T> currentVelNorm(nx, ny);
+  Box2D domain = lattice.getBoundingBox();
 
   T tIni = global::timer("simTime").stop();
   // Main loop over time iterations.
   plint iT = 0;
-  MultiScalarField2D<T> previousVelNorm(parameters.getNx(), parameters.getNy());
-  MultiScalarField2D<T> latestVelNorm(parameters.getNx(), parameters.getNy());
-  plint totalCell = parameters.getNx() * parameters.getNy();
 
   for (iT = 0; iT * parameters.getDeltaT() < maxT; ++iT) {
 
@@ -298,26 +297,20 @@ int main(int argc, char *argv[]) {
       writeField(outputDir, lattice, parameters, iT);
     }
     if (iT % residualAnalysisIter == residualAnalysisIter - 1) {
-      computeVelocityNorm(lattice, previousVelNorm, lattice.getBoundingBox());
+      computeVelocityNorm(lattice, previousVelNorm, domain);
     }
 
     if (iT % residualAnalysisIter == 0 && iT > 0) {
-      computeVelocityNorm(lattice, latestVelNorm, lattice.getBoundingBox());
-      std::unique_ptr<MultiScalarField2D<T>> residual =
-          subtract(latestVelNorm, previousVelNorm);
-      divideInPlace(*residual, *add(latestVelNorm, 1e-6));
-      T error = sqrt(computeSum(
-                    *computePower(*residual, 2., lattice.getBoundingBox()))) /
-                totalCell;
-      converge.takeValue(error, true);
+      computeVelocityNorm(lattice, currentVelNorm, domain);
+      residualTracer.measure(currentVelNorm, previousVelNorm, domain, true);
     }
 
     if (iT % parameters.nStep(logT) == 0) {
       pcout << "step " << iT << "; t=" << iT * parameters.getDeltaT();
     }
 
-    if (converge.hasConverged()) {
-      pcout << "simulation is converaged" << endl;
+    if (residualTracer.hasConverged()) {
+      pcout << "simulation is over" << endl;
       break;
     }
 

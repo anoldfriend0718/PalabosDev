@@ -5,8 +5,11 @@ enable_language(CXX)
 
 set(EXECUTABLE_NAME "cylinder2d")
 set(MODIFIED_EXECUTABLE_NAME "guocylinder2d")
+
 set(PALABOS_SOURCE_REPO "/home/anoldfriend/Workspace/MyRepo/palabos")
-message("PALABOS_SOURCE_REPO:" ${PALABOS_SOURCE_REPO})
+set(CUSTOMIZED_PARABOS_SOURCE_REPO "/home/anoldfriend/Workspace/MyRepo/mypalabos")
+message("PALABOS_SOURCE_REPO: " ${PALABOS_SOURCE_REPO})
+message("CUSTOMIZED_PARABOS_SOURCE_REPO: " ${CUSTOMIZED_PARABOS_SOURCE_REPO})
 
 set(PALABOS_LIB_DIRECTORY_BASE  "/home/anoldfriend/Workspace/MyRepo/mypalabos/build/palaboslib/lib")
 message("PALABOS_LIB_DIRECTORY_BASE: " ${PALABOS_LIB_DIRECTORY_BASE})
@@ -78,6 +81,7 @@ endif()
 
 
 include_directories("${PALABOS_SOURCE_REPO}/src")
+include_directories("${CUSTOMIZED_PARABOS_SOURCE_REPO}/src")
 include_directories("${PALABOS_SOURCE_REPO}/externalLibraries")
 include_directories("${PALABOS_SOURCE_REPO}/externalLibraries/Eigen3")
 
