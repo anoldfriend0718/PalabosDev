@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
   plint nx = parameters.getNx();
   plint ny = parameters.getNy();
   T convergeThreshold = 1e-6;
-  util::ResidualTracer2D<T> residualTracer(1, 10, nx, ny, convergeThreshold);
+  util::ResidualTracer2D<T> residualTracer(10, nx, ny, convergeThreshold);
   MultiScalarField2D<T> previousVelNorm(nx, ny);
   MultiScalarField2D<T> currentVelNorm(nx, ny);
   Box2D domain = lattice.getBoundingBox();
@@ -274,7 +274,6 @@ int main(int argc, char *argv[]) {
   T tIni = global::timer("simTime").stop();
   // Main loop over time iterations.
   plint iT = 0;
-
   for (iT = 0; iT * parameters.getDeltaT() < maxT; ++iT) {
 
     // At this point, the state of the lattice corresponds to the

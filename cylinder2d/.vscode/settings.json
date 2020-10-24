@@ -81,7 +81,8 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "svd": "cpp"
+        "svd": "cpp",
+        "cassert": "cpp"
     },
     "python.pythonPath": "/usr/bin/python3",
 
