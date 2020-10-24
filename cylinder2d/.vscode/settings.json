@@ -12,9 +12,11 @@
         "readability-*",
         "modernize-*",
         "-modernize-deprecated-headers",
-        "-modernize-use-trailing-return-type"
+        "-modernize-use-trailing-return-type",
+        "-readability-magic-numbers"
     ],
-    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    // "C_Cpp.errorSquiggles": "Enabled",
     "C_Cpp.intelliSenseEngineFallback": "Enabled",
     "clang-tidy.lintOnSave": false,
     "files.associations": {

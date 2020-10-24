@@ -1,0 +1,37 @@
+<?xml version="1.0" ?>
+
+<lattice>
+    <!-- Valocity discretizazion -->
+    <lbm> D2Q9 </lbm>
+    <!-- Dynamics used for the simulation -->
+    <dynName> RR </dynName>
+    <!-- Relaxation of high-order moments (either SRT (BGK) or REG (1.0))-->
+    <hoOmega> SRT </hoOmega>
+</lattice>
+
+
+<simuParam>
+    <!--Re defined by UD/visco-->
+    <re> 40 </re>
+    <!--length x-->
+    <lx> 2. </lx>
+    <!--length y-->
+    <ly> 1. </ly>
+    <!--length resolution-->
+    <resolution> 210 </resolution>
+    <!--omega=1/tau-->
+    <omega> 1.2 </omega>
+    <!--converage threshold-->
+    <threshold>1e-8 </threshold>
+</simuParam>
+
+<io>
+    <!-- Directory where the output will be stored (must end with /) -->
+    <output> ./tmpguo/ </output>
+    <!--max physical time-->
+    <maxT> 10.1 </maxT>
+    <!--output time step-->
+    <outputT> 1.0 </outputT>
+    <!--log time step-->
+    <logT> 0.1 </logT>
+</io>
