@@ -11,12 +11,6 @@ using namespace testing;
 using namespace plb;
 
 typedef double T;
-int main(int argc, char **argv) {
-  plbInit(&argc, &argv); // should init plb first, otherwise undefined behavior
-                         // happen when using the Palabos data structure
-  InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
 
 TEST(UtilityMethods, TestComputeSum) {
   MultiScalarField2D<T> field(2, 2, (double)1.0);

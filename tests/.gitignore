@@ -1,3 +1,2 @@
 # Ignore temporary files created through editing, compilation, and linking.
-test_*
-!test_*.cpp
+tests
