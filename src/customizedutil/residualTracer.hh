@@ -65,25 +65,23 @@ template <typename T> void ResidualTracer2D<T>::resetValues() {
 template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
   if ((plint)relativeErrors.size() < count) {
     return false;
-  } else {
-    T average = computeAverage();
-    if (!util::isNaN(average)) {
-      bool isConvergence = average < epsilon;
-      if (!isConvergence) {
-        return false;
-      }
-      pcout << std::endl
-            << "simulation is converged with the average residual error: "
-            << average << std::endl;
-      return true;
-    }
-
-    else {
-      pcout << "simulation diverged.\n";
-      return true;
-    }
   }
-}
+
+  T average = computeAverage();
+  if (util::isNaN(average)) {
+    pcout << "simulation diverged.\n";
+    return true;
+  }
+
+  bool isConvergence = average < epsilon;
+  if (!isConvergence) {
+    return false;
+  }
+  pcout << std::endl
+        << "simulation is converged with the average residual error: "
+        << average << std::endl;
+  return true;
+} // namespace util
 
 template <typename T> T ResidualTracer2D<T>::computeAverage() const {
 
