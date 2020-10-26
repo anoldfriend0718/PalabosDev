@@ -22,14 +22,14 @@
     <!--omega=1/tau-->
     <omega> 1.2 </omega>
     <!--converage threshold-->
-    <threshold>1e-8 </threshold>
+    <threshold>1e-6 </threshold>
 </simuParam>
 
 <io>
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmpguo/ </output>
     <!--max physical time-->
-    <maxT> 10.1 </maxT>
+    <maxT> 20.1 </maxT>
     <!--output time step-->
     <outputT> 1.0 </outputT>
     <!--log time step-->
