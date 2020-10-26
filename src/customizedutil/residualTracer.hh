@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <numeric>
 
 namespace plb {
 
@@ -26,11 +27,11 @@ ResidualTracer2D<T>::ResidualTracer2D(plint _count, plint _nx, plint _ny,
 template <typename T>
 void ResidualTracer2D<T>::measure(MultiScalarField2D<T> &currentField,
                                   MultiScalarField2D<T> &previousField,
-                                  Box2D &domain, bool doPrint) {
+                                  Box2D domain, bool doPrint) {
   subtract(currentField, previousField, absoluteResidualField, domain);
   T relativeError =
-      computeSum(*computePower(absoluteResidualField, 2.0, domain)) /
-      computeSum(*computePower(currentField, 2.0, domain));
+      sqrt(computeSum(*computePower(absoluteResidualField, 2.0, domain)) /
+           computeSum(*computePower(currentField, 2.0, domain)));
 
   relativeErrors.push_back(relativeError);
   if ((plint)relativeErrors.size() > count) {
@@ -85,6 +86,7 @@ template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
 }
 
 template <typename T> T ResidualTracer2D<T>::computeAverage() const {
+
   return accumulate(relativeErrors.begin(), relativeErrors.end(), 0.) /
          relativeErrors.size();
 }

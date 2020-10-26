@@ -32,12 +32,13 @@ public:
   void resetValues();
   /// Feed the object with a new measured scalar.
   void measure(MultiScalarField2D<T> &currentField,
-               MultiScalarField2D<T> &previousField, Box2D &domain,
+               MultiScalarField2D<T> &previousField, Box2D domain,
                bool doPrint = false);
   /// Test for convergence, with respect to stdDev.
   bool hasConverged() const;
 
   void setEpsilon(T epsilon_);
+  std::deque<T> getRelativeErrors() { return relativeErrors; };
 
 private:
   plint count;
