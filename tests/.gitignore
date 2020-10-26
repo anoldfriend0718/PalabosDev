@@ -1,11 +1,2 @@
 # Ignore temporary files created through editing, compilation, and linking.
-*~
-*.o
-*.a
-*.dblite
-*.pyc
-*.os
-*.exe
-
-/vcpkg_installed
-*/.ipynb_checkpoints/
+test_try
