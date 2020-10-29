@@ -9,6 +9,7 @@
 #include "multiBlock/multiDataField2D.h"
 #include "palabos2D.h"
 #include "palabos2D.hh"
+#include <memory>
 
 using namespace plb;
 using namespace std;
@@ -21,7 +22,7 @@ struct Param {
   string outputDir;
   pluint nx;
   pluint ny;
-  Param() {}
+  Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
     document["geometry"]["filename"].read(geometryFile);
@@ -36,6 +37,23 @@ std::string GetFileName(const std::string path, const string seperator) {
   string filename = path.substr(iPos, path.length() - iPos);
   string name = filename.substr(0, filename.rfind("."));
   return name;
+}
+
+unique_ptr<MultiScalarField2D<int>>
+readGeomtry(const Param &param, bool isWriteGeometryImage = true) {
+  unique_ptr<MultiScalarField2D<int>> geometry(
+      new MultiScalarField2D<int>(param.nx, param.ny));
+  plb_ifstream geometryFileStream(param.geometryFile.c_str());
+  geometryFileStream >> *geometry;
+  if (isWriteGeometryImage) {
+    ImageWriter<int> geometryImageWriter("leeloo");
+    const string seperator = "/";
+    string imageFileName = GetFileName(param.geometryFile, seperator);
+    geometryImageWriter.writeScaledGif(imageFileName, *geometry);
+    pcout << "geometry image is output: " << param.outputDir << seperator
+          << imageFileName << ".gif" << endl;
+  }
+  return geometry;
 }
 
 int main(int argc, char **argv) {
@@ -60,16 +78,9 @@ int main(int argc, char **argv) {
   pcout << "output directory: " << param.outputDir << endl;
   global::directories().setOutputDir(param.outputDir);
 
-  MultiScalarField2D<int> geometry(param.nx, param.ny);
-  plb_ifstream geometryFileStream(param.geometryFile.c_str());
-  geometryFileStream >> geometry;
-
   MultiBlockLattice2D<T, DESCRIPTOR> lattices(
       param.nx, param.ny, new BGKdynamics<T, DESCRIPTOR>(1.0));
-
-  ImageWriter<int> geometryImageWriter("leeloo");
-  geometryImageWriter.writeScaledGif(GetFileName(param.geometryFile, "/"),
-                                     geometry);
+  std::unique_ptr<MultiScalarField2D<int>> geometry = readGeomtry(param);
 
   return 0;
 }
