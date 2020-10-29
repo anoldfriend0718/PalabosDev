@@ -120,6 +120,7 @@ include_directories("${CUSTOMIZED_PARABOS_SOURCE_REPO}/src")
 cmake_policy(SET CMP0079 NEW)
 
 add_subdirectory(apps/cylinder2d)
+add_subdirectory(apps/pmsinglephaseflow)
 
 enable_testing()
 add_subdirectory(tests)
