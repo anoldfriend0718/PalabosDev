@@ -19,16 +19,20 @@
 </geometry>
 
 <simuParam>
-    <!--Re defined by UD/visco-->
-    <re> 40 </re>
-    <!--length x-->
-    <lx> 2. </lx>
+    <!-- physical velocity with unit as m/s-->
+    <physicalU>0.5</physicalU>
+    <!-- lattice velocity with lattice unit-->
+    <latticeU>0.01</latticeU>
+    <!--Re defined by U*characteristic length/visco-->
+    <re> 5 </re>
+    <!--length x with lattice unit-->
+    <latticeLx> 1140 </latticeLx>
     <!--length y-->
-    <ly> 1. </ly>
-    <!--length resolution-->
-    <resolution> 210 </resolution>
-    <!--omega=1/tau-->
-    <omega> 1.2 </omega>
+    <latticeLy> 990 </latticeLy>
+    <!--length per pixel-->
+    <resolution> 1e-6 </resolution>
+    <!--characteristic length with lattice unit-->
+    <latticeCharacteristicLength>100</latticeCharacteristicLength>
     <!--converage threshold-->
     <threshold>1e-6 </threshold>
 </simuParam>

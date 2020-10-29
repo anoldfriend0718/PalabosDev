@@ -1,3 +1,4 @@
+#include "../../src/parameters/singlePhaseFlowParameters.h"
 #include "basicDynamics/isoThermalDynamics.h"
 #include "core/globalDefs.h"
 #include "core/plbInit.h"
@@ -22,6 +23,8 @@ struct Param {
   string outputDir;
   pluint nx;
   pluint ny;
+  SinglePhaseFlowParam<T> flowParam;
+  T threshold;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
@@ -29,6 +32,25 @@ struct Param {
     document["geometry"]["nx"].read(nx);
     document["geometry"]["ny"].read(ny);
     document["io"]["output"].read(outputDir);
+    T physicalU;
+    pluint latticeCharacteristicLength;
+    T resolution;
+    T re;
+    T latticeU;
+    pluint latticeLx;
+    pluint latticeLy;
+    document["simuParam"]["physicalU"].read(physicalU);
+    document["simuParam"]["latticeU"].read(latticeU);
+    document["simuParam"]["re"].read(re);
+    document["simuParam"]["latticeLx"].read(latticeLx);
+    document["simuParam"]["latticeLy"].read(latticeLy);
+    document["simuParam"]["resolution"].read(resolution);
+    document["simuParam"]["latticeCharacteristicLength"].read(
+        latticeCharacteristicLength);
+    flowParam = SinglePhaseFlowParam<T>(physicalU, latticeU, re,
+                                        latticeCharacteristicLength, resolution,
+                                        latticeLx, latticeLy);
+    document["simuParam"]["resolution"].read(threshold);
   }
 };
 
@@ -77,10 +99,12 @@ int main(int argc, char **argv) {
   pcout << "geometry file: " << param.geometryFile << endl;
   pcout << "output directory: " << param.outputDir << endl;
   global::directories().setOutputDir(param.outputDir);
+  param.flowParam.writeLogFile("Berea Stone 2D flow");
 
-  MultiBlockLattice2D<T, DESCRIPTOR> lattices(
-      param.nx, param.ny, new BGKdynamics<T, DESCRIPTOR>(1.0));
   std::unique_ptr<MultiScalarField2D<int>> geometry = readGeomtry(param);
+  MultiBlockLattice2D<T, DESCRIPTOR> lattices(
+      param.nx, param.ny,
+      new BGKdynamics<T, DESCRIPTOR>(param.flowParam.getOmega()));
 
   return 0;
 }
