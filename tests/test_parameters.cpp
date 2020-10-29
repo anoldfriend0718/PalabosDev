@@ -10,13 +10,14 @@ using namespace plb;
 template <typename T> class SinglePhaseFlowParam {
 public:
   SinglePhaseFlowParam(T physicalU_, T latticeU_, T Re_,
-                       plint latticeCharacteristicLength_,
-                       T physicalLengthPerPixel, T latticeLx_, T LatticeLy_,
-                       T latticeLz_ = T())
+                       pluint latticeCharacteristicLength_,
+                       T physicalLengthPerPixel, pluint latticeLx_,
+                       pluint LatticeLy_, pluint latticeLz_ = T())
       : physicalU(physicalU_), latticeU(latticeU_), Re(Re_),
         latticeCharacteristicLength(latticeCharacteristicLength_),
         resolution(physicalLengthPerPixel), latticeLx(latticeLx_),
         latticeLy(LatticeLy_), latticeLz(latticeLz_) {}
+  SinglePhaseFlowParam() = default;
 
   /// velocity in lattice units (proportional to Mach number)
   T getLatticeU() const { return latticeU; }
@@ -30,7 +31,7 @@ public:
   }
   /// resolution
   T getResolution() const { return resolution; }
-  plint getLatticeCharacteristicLength() const {
+  pluint getLatticeCharacteristicLength() const {
     return latticeCharacteristicLength;
   }
   /// x-length in physical units
@@ -44,19 +45,19 @@ public:
   /// time step in dimensionless units
   T getDeltaT() const { return getDeltaX() * getLatticeU() / getPhysicalU(); }
   /// conversion from dimensionless to lattice units for space coordinate
-  plint nCell(T l) const { return (int)(l / getDeltaX() + (T)0.5); }
+  pluint nCell(T l) const { return (int)(l / getDeltaX() + (T)0.5); }
   /// conversion from dimensionless to lattice units for time coordinate
-  plint nStep(T t) const { return (int)(t / getDeltaT() + (T)0.5); }
+  pluint nStep(T t) const { return (int)(t / getDeltaT() + (T)0.5); }
   /// number of lattice cells in x-direction
-  plint getNx(bool offLattice = false) const {
+  pluint getNx(bool offLattice = false) const {
     return nCell(getPhysicalLx()) + 1 + (int)offLattice;
   }
   /// number of lattice cells in y-direction
-  plint getNy(bool offLattice = false) const {
+  pluint getNy(bool offLattice = false) const {
     return nCell(getPhysicalLy()) + 1 + (int)offLattice;
   }
   /// number of lattice cells in z-direction
-  plint getNz(bool offLattice = false) const {
+  pluint getNz(bool offLattice = false) const {
     return nCell(getPhysicalLz()) + 1 + (int)offLattice;
   }
   /// viscosity in lattice units
@@ -70,23 +71,42 @@ public:
 
 private:
   T physicalU, latticeU, Re;
-  plint latticeCharacteristicLength;
+  pluint latticeCharacteristicLength;
   T resolution;
-  T latticeLx, latticeLy, latticeLz;
+  pluint latticeLx, latticeLy, latticeLz;
 };
 
 typedef double T;
-TEST(SinglePhaseFlowParameter, TestPhysicalCharacteristicLength) {
-  T physicalU = 1.0;
-  plint latticeCharacteristicLength = 100;
-  T resolution = 1e-6;
-  T re = 0.1;
-  T latticeU = 0.01;
-  plint latticeLx = 100;
-  plint latticeLy = 100;
-  SinglePhaseFlowParam<T> flowParam(physicalU, latticeU, re,
-                                    latticeCharacteristicLength, resolution,
-                                    latticeLx, latticeLy);
+class SinglePhaseFlowParameterExample {
+public:
+  SinglePhaseFlowParameterExample() {
+    T physicalU = 0.5;
+    pluint latticeCharacteristicLength = 100;
+    T resolution = 1e-6;
+    T re = 5;
+    T latticeU = 0.01;
+    pluint latticeLx = 100;
+    pluint latticeLy = 100;
+    flowParam = SinglePhaseFlowParam<T>(physicalU, latticeU, re,
+                                        latticeCharacteristicLength, resolution,
+                                        latticeLx, latticeLy);
+  }
+  SinglePhaseFlowParam<T> flowParam;
+};
+
+class SinglePhaseFlowParameterTest : public Test {
+public:
+  SinglePhaseFlowParam<T> flowParam =
+      SinglePhaseFlowParameterExample().flowParam;
+};
+
+TEST_F(SinglePhaseFlowParameterTest, TestIfGetCorrectParameters) {
   ASSERT_DOUBLE_EQ(flowParam.getPhysicalCharacteristicLength(), 1e-4);
-  // SinglePhaseFlowParam<T> flowParam();
+  ASSERT_DOUBLE_EQ(flowParam.getPhysicalLx(), 1e-4);
+  ASSERT_DOUBLE_EQ(flowParam.getPhysicalLy(), 1e-4);
+  ASSERT_DOUBLE_EQ(flowParam.getDeltaX(), 1e-6);
+  ASSERT_DOUBLE_EQ(flowParam.getDeltaT(), 2.0 * 1e-8);
+  ASSERT_DOUBLE_EQ(flowParam.getLatticeNu(), 0.2);
+  ASSERT_DOUBLE_EQ(flowParam.getTau(), 1.1);
+  ASSERT_DOUBLE_EQ(flowParam.getOmega(), 1.0 / 1.1);
 }
