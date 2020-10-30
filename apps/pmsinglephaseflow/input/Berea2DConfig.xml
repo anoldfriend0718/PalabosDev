@@ -41,17 +41,25 @@
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmp/ </output>
     <!--max physical time-->
-    <maxT> 1 </maxT>
+    <maxT> 1e-3 </maxT>
+    <!-- if writ out gif image-->
+    <ifImSave>true</ifImSave>
     <!--image file save time step-->
-    <imSaveStep> 1000 </imSaveStep>
+    <imSaveStep> 2000 </imSaveStep>
+    <!-- if write out vtk files-->
+    <ifVtkSave>false</ifVtkSave>
     <!--vtk file save time step-->
-    <vtkSaveStep> 1000 </vtkSaveStep>
+    <vtkSaveStep> 5000 </vtkSaveStep>
+    <!--if save field data-->
+    <ifFiledDataSave>false</ifFiledDataSave>
     <!--field data save time step-->
-    <fieldDataSaveStep> 1000 </fieldDataSaveStep>
+    <fieldDataSaveStep> 5000 </fieldDataSaveStep>
     <!--residual measure time step-->
     <residualAnalysisStep> 1000 </residualAnalysisStep>
     <!--log time step-->
     <logStep> 1000 </logStep>
     <!-- log level-->
     <logLevel> debug </logLevel>
+    <!-- if toggle internal statistics-->
+    <ifToggleInternalStatistics> false </ifToggleInternalStatistics>
 </io>

@@ -6,6 +6,8 @@
 #include "dataProcessors/dataAnalysisWrapper2D.h"
 #include "dataProcessors/dataAnalysisWrapper2D.hh"
 #include "io/parallelIO.h"
+#include "plog/Log.h"
+#include "plog/Severity.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -38,7 +40,7 @@ void ResidualTracer2D<T>::measure(MultiScalarField2D<T> &currentField,
     relativeErrors.erase(relativeErrors.begin());
     if (doPrint && t % count == 0) {
       T average = computeAverage();
-      pcout << "average relative error=" << average << std::endl;
+      PLOG(plog::info) << "average relative error=" << average;
     }
   }
   ++t;
@@ -69,7 +71,7 @@ template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
 
   T average = computeAverage();
   if (util::isNaN(average)) {
-    pcout << "simulation diverged.\n";
+    PLOG(plog::fatal) << "simulation diverged.";
     return true;
   }
 
@@ -77,9 +79,8 @@ template <typename T> bool ResidualTracer2D<T>::hasConverged() const {
   if (!isConvergence) {
     return false;
   }
-  pcout << std::endl
-        << "simulation is converged with the average residual error: "
-        << average << std::endl;
+  PLOG(plog::info)
+      << "simulation is converged with the average residual error: " << average;
   return true;
 } // namespace util
 

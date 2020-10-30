@@ -7,6 +7,8 @@
 #include "customizedutil/plblogger.h"
 #include "customizedutil/residualTracer.h"
 #include "customizedutil/residualTracer.hh"
+#include "dataProcessors/dataAnalysisWrapper2D.h"
+#include "dataProcessors/dataAnalysisWrapper3D.h"
 #include "dataProcessors/dataInitializerWrapper2D.h"
 #include "io/imageWriter.h"
 #include "io/parallelIO.h"
@@ -15,6 +17,7 @@
 #include "multiBlock/multiDataField2D.h"
 #include "palabos2D.h"
 #include "palabos2D.hh"
+#include "plog/Log.h"
 #include "plog/Severity.h"
 #include <cstdlib>
 #include <memory>
@@ -39,7 +42,11 @@ struct Param {
   pluint fieldDataSaveStep;
   pluint residualAnalysisStep;
   T maxT;
-  string logLevel;
+  std::string logLevel;
+  bool ifImSave;
+  bool ifVtkSave;
+  bool ifFiledDataSave;
+  bool ifToggleInternalStatistics;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
@@ -73,6 +80,11 @@ struct Param {
     document["io"]["residualAnalysisStep"].read(residualAnalysisStep);
     document["io"]["maxT"].read(maxT);
     document["io"]["logLevel"].read(logLevel);
+    document["io"]["ifImSave"].read(ifImSave);
+    document["io"]["ifVtkSave"].read(ifVtkSave);
+    document["io"]["ifFiledDataSave"].read(ifFiledDataSave);
+    document["io"]["ifToggleInternalStatistics"].read(
+        ifToggleInternalStatistics);
   }
 };
 
@@ -94,8 +106,8 @@ readGeomtry(const Param &param, bool isWriteGeometryImage = true) {
     const string seperator = "/";
     string imageFileName = GetFileName(param.geometryFile, seperator);
     geometryImageWriter.writeScaledGif(imageFileName, *geometry);
-    pcout << "geometry image is output: " << param.outputDir << seperator
-          << imageFileName << ".gif" << endl;
+    PLOG(plog::info) << "geometry image is output: " << param.outputDir
+                     << seperator << imageFileName << ".gif" << endl;
   }
   return geometry;
 }
@@ -215,6 +227,33 @@ void writeField(const string outputDir,
                                                    lattice.getBoundingBox()));
 }
 
+T computePermeability(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
+                      SinglePhaseFlowParam<T> const &flowParam) {
+  Box2D domain = lattice.getBoundingBox();
+  pluint nx = flowParam.getNx();
+  pluint ny = flowParam.getNy();
+  Box2D inlet(0, 0, 1, ny - 2);
+  Box2D outlet(nx - 1, nx - 1, 1, ny - 2);
+  T densityInlet = computeAverageDensity(lattice, inlet);
+  T densityOutlet = computeAverageDensity(lattice, outlet);
+  T deltaP = (densityOutlet - densityInlet) * DESCRIPTOR<T>::cs2;
+  PLOG(plog::debug) << "inlet average density: " << densityInlet
+                    << "; outlet average density: " << densityOutlet
+                    << "; delta pressure: " << deltaP;
+  std::unique_ptr<MultiScalarField2D<T>> velU =
+      computeVelocityComponent(lattice, domain, 0);
+  T meanUInlet = computeAverage(*velU, inlet);
+  T meanUOutlet = computeAverage(*velU, outlet);
+  T meanUDomain = computeAverage(*velU, domain);
+  PLOG(plog::debug) << "inlet average U: " << meanUInlet
+                    << "; outlet average U: " << meanUOutlet
+                    << "; domain average U: " << meanUDomain;
+  T permeability =
+      flowParam.getLatticeNu() * meanUDomain / (deltaP / (T)(nx - 1));
+  PLOG(plog::info) << "permeability: " << permeability;
+  return permeability;
+}
+
 int main(int argc, char **argv) {
   plbInit(&argc, &argv);
 
@@ -260,9 +299,10 @@ int main(int argc, char **argv) {
   T deltaT = param.flowParam.getDeltaT();
   pluint residualAnalysisStep = param.residualAnalysisStep;
   pluint iT = 0;
+  global::timer("mainloop").start();
   for (iT = 0; iT * deltaT < param.maxT; iT++) {
-
-    if (iT % param.logStep == 0) {
+    lattice.toggleInternalStatistics(param.ifToggleInternalStatistics);
+    if (param.ifToggleInternalStatistics && iT % param.logStep == 0) {
       PLOG(plog::info) << "step " << iT
                        << "; t=" << iT * param.flowParam.getDeltaT()
                        << "; av energy =" << setprecision(10)
@@ -270,18 +310,24 @@ int main(int argc, char **argv) {
                        << "; av rho =" << getStoredAverageDensity<T>(lattice);
     }
 
-    if (iT % param.imSaveStep == 0) {
-      PLOG(plog::debug) << "Saving Gif ...";
+    if (param.ifImSave && iT % param.imSaveStep == 0) {
+      PLOG(plog::debug) << "step " << iT
+                        << "; t=" << iT * param.flowParam.getDeltaT()
+                        << "; Saving Gif ...";
       writeGif(lattice, iT);
     }
 
-    if (iT % param.vtkSaveStep == 0 && iT > 0) {
-      PLOG(plog::debug) << "Saving VTK file ...";
+    if (param.ifVtkSave && iT % param.vtkSaveStep == 0 && iT > 0) {
+      PLOG(plog::debug) << "step " << iT
+                        << "; t=" << iT * param.flowParam.getDeltaT()
+                        << "; Saving VTK file ...";
       writeVTK(lattice, param.flowParam, iT);
     }
 
-    if (iT % param.fieldDataSaveStep == 0 && iT > 0) {
-      PLOG(plog::debug) << "Saving field text file...";
+    if (param.ifFiledDataSave && iT % param.fieldDataSaveStep == 0 && iT > 0) {
+      PLOG(plog::debug) << "step " << iT
+                        << "; t=" << iT * param.flowParam.getDeltaT()
+                        << "; Saving field text file...";
       writeField(param.outputDir, lattice, param.flowParam, iT);
     }
 
@@ -291,6 +337,9 @@ int main(int argc, char **argv) {
 
     if (iT % residualAnalysisStep == 0 && iT > 0) {
       computeVelocityNorm(lattice, currentVelNorm, domain);
+      PLOG(plog::info) << "step " << iT
+                       << "; t=" << iT * param.flowParam.getDeltaT()
+                       << "; measure residual error...";
       residualTracer.measure(currentVelNorm, previousVelNorm, domain, true);
     }
 
@@ -305,12 +354,15 @@ int main(int argc, char **argv) {
     //   discrete time iT+1, and the stored averages are upgraded to time iT.
   }
 
-  PLOG(plog::info) << "write out the fields at the final step...";
+  PLOG(plog::info) << "step " << iT
+                   << "; t=" << iT * param.flowParam.getDeltaT()
+                   << "; write out the fields at the final step...";
   writeGif(lattice, iT);
   writeVTK(lattice, param.flowParam, iT);
   writeField(param.outputDir, lattice, param.flowParam, iT);
 
-  global::timer("mainloop").start();
+  computePermeability(lattice, param.flowParam);
+
   T tEnd = global::timer("mainloop").stop();
   PLOG(plog::info) << "number of processors: " << global::mpi().getSize();
   PLOG(plog::info) << "total iteraction step: " << iT;
