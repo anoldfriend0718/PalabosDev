@@ -52,4 +52,6 @@
     <residualAnalysisStep> 1000 </residualAnalysisStep>
     <!--log time step-->
     <logStep> 1000 </logStep>
+    <!-- log level-->
+    <logLevel> debug </logLevel>
 </io>

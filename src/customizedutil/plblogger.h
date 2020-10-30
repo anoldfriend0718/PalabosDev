@@ -5,6 +5,7 @@
 #include <memory>
 #include <plog/Init.h>
 #include <plog/Log.h>
+#include <plog/Severity.h>
 
 namespace plb {
 
@@ -33,5 +34,26 @@ template <class Formatter>
 std::shared_ptr<plb_ofstream> PlbLoggerAppender<Formatter>::logfile =
     std::make_shared<plb_ofstream>("plb.log");
 
+plog::Severity getSeverity(std::string severity) {
+  if (severity == "verbose") {
+    return plog::verbose;
+  } else if (severity == "debug") {
+    return plog::debug;
+  } else if (severity == "info") {
+    return plog::info;
+  } else if (severity == "warning") {
+    return plog::warning;
+  } else if (severity == "error") {
+    return plog::error;
+  } else if (severity == "fatal") {
+    return plog::verbose;
+  } else if (severity == "none") {
+    return plog::none;
+  } else {
+    return plog::info;
+  }
+}
+
 } // namespace util
+
 } // namespace plb

@@ -16,6 +16,7 @@
 #include "palabos2D.h"
 #include "palabos2D.hh"
 #include "plog/Severity.h"
+#include <cstdlib>
 #include <memory>
 #include <plog/Formatters/TxtFormatter.h>
 
@@ -38,6 +39,7 @@ struct Param {
   pluint fieldDataSaveStep;
   pluint residualAnalysisStep;
   T maxT;
+  string logLevel;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
@@ -70,6 +72,7 @@ struct Param {
     document["io"]["fieldDataSaveStep"].read(fieldDataSaveStep);
     document["io"]["residualAnalysisStep"].read(residualAnalysisStep);
     document["io"]["maxT"].read(maxT);
+    document["io"]["logLevel"].read(logLevel);
   }
 };
 
@@ -214,25 +217,28 @@ void writeField(const string outputDir,
 
 int main(int argc, char **argv) {
   plbInit(&argc, &argv);
-  // initialize the logger
-  static plb::util::PlbLoggerAppender<plog::TxtFormatter> plbAppender;
-  plog::init(plog::debug, &plbAppender);
 
   string configXml;
   try {
     global::argv(1).read(configXml);
 
   } catch (const PlbIOException &ex) {
-    PLOG(plog::error) << "Wrong parameters; the syntax is"
-                      << (string)global::argv(0) << " config.xml";
+    pcerr << "Wrong parameters; the syntax is" << (string)global::argv(0)
+          << " config.xml" << endl;
+    return EXIT_FAILURE;
   }
   Param param;
   try {
     param = Param(configXml);
   } catch (const PlbIOException &ex) {
-    PLOG(plog::error) << "Invaid configuration xml, with error message: "
-                      << ex.what();
+    pcerr << "Invaid configuration xml, with error message: " << ex.what()
+          << endl;
+    return EXIT_FAILURE;
   }
+  // initialize the logger
+  static plb::util::PlbLoggerAppender<plog::TxtFormatter> plbAppender;
+  plog::init(plb::util::getSeverity(param.logLevel), &plbAppender);
+
   PLOG(plog::info) << "configuration xml file: " << configXml;
   PLOG(plog::info) << "geometry file: " << param.geometryFile;
   PLOG(plog::info) << "output directory: " << param.outputDir;
@@ -309,5 +315,5 @@ int main(int argc, char **argv) {
   PLOG(plog::info) << "number of processors: " << global::mpi().getSize();
   PLOG(plog::info) << "total iteraction step: " << iT;
   PLOG(plog::info) << "total computational time for main loop: " << tEnd;
-  return 0;
+  return EXIT_SUCCESS;
 }

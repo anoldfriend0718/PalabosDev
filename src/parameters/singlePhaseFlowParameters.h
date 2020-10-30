@@ -1,5 +1,7 @@
 #include "core/globalDefs.h"
 #include "io/parallelIO.h"
+#include "plog/Log.h"
+#include "plog/Severity.h"
 #include <iostream>
 using namespace plb;
 
@@ -90,8 +92,7 @@ public:
           << "\n";
     ofile << "Grid spacing deltaX:                dx=" << getDeltaX() << "\n";
     ofile << "Time step deltaT:                   dt=" << getDeltaT() << "\n";
-    pcout << "single phase flow parameter is output to " << fullName
-          << std::endl;
+    PLOG(plog::info) << "single phase flow parameter is output to " << fullName;
     return true;
   }
 
