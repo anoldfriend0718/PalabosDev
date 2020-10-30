@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <memory>
 #include <plog/Formatters/TxtFormatter.h>
+#include "parameters/LBMModelParser2D.h"
 
 using namespace plb;
 using namespace std;
@@ -54,6 +55,7 @@ struct Param {
   pluint checkPointStep;
   bool ifLoadCheckPoint;
   pluint initStep;
+  LBMModelParser2D<T, DESCRIPTOR> lbmPara;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
@@ -67,6 +69,7 @@ struct Param {
     T latticeU;
     pluint latticeLx;
     pluint latticeLy;
+
     document["simuParam"]["physicalU"].read(physicalU);
     document["simuParam"]["latticeU"].read(latticeU);
     document["simuParam"]["re"].read(re);
@@ -97,6 +100,16 @@ struct Param {
     document["io"]["checkPointStep"].read(checkPointStep);
     document["init"]["ifLoadCheckPoint"].read(ifLoadCheckPoint);
     document["init"]["initStep"].read(initStep);
+
+    string lbm;
+    DynamicsName dynName;
+    HOOmega hoOmega;
+    document["lattice"]["lbm"].read(lbm);
+    document["lattice"]["dynName"].read(dynName);
+    document["lattice"]["hoOmega"].read(hoOmega);
+    // TODO:add lbmParam here
+    lbmPara =
+        LBMModelParser2D<T, DESCRIPTOR>(dynName, hoOmega, flowParam.getOmega());
   }
 };
 
@@ -306,9 +319,12 @@ int main(int argc, char **argv) {
   param.flowParam.writeLogFile("Berea Stone 2D flow");
 
   std::unique_ptr<MultiScalarField2D<int>> geometry = readGeomtry(param);
-  MultiBlockLattice2D<T, DESCRIPTOR> lattice(
-      param.nx, param.ny,
-      new BGKdynamics<T, DESCRIPTOR>(param.flowParam.getOmega()));
+
+  std::unique_ptr<Dynamics<T, DESCRIPTOR>> dynamics =
+      param.lbmPara.getDynamics();
+  param.lbmPara.setAllOmega();
+  MultiBlockLattice2D<T, DESCRIPTOR> lattice(param.nx, param.ny,
+                                                      dynamics.get());
   boundarySetAndInit(lattice, param.flowParam, geometry);
 
   global::timer("mainloop").start();
