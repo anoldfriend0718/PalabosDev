@@ -63,7 +63,7 @@ public:
   T getLatticeNu() const {
     return getLatticeU() * (T)getLatticeCharacteristicLength() / Re;
   }
-  /// relaxation time
+  /// relaxation time for D2Q9 with cs*cs=1/3
   T getTau() const { return (T)3 * getLatticeNu() + (T)0.5; }
   /// relaxation frequency
   T getOmega() const { return (T)1 / getTau(); }
