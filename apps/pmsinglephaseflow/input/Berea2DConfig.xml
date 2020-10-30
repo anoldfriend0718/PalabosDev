@@ -74,5 +74,5 @@
     <!-- if load check point-->
     <ifLoadCheckPoint>true</ifLoadCheckPoint>
     <!-- init time step-->
-    <initStep>5000</initStep>
+    <initStep>25000</initStep>
 </init>

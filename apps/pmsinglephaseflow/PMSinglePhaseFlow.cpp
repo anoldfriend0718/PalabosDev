@@ -3,6 +3,7 @@
 #include "boundaryCondition/boundaryCondition.h"
 #include "core/globalDefs.h"
 #include "core/plbInit.h"
+#include "core/plbProfiler.h"
 #include "core/runTimeDiagnostics.h"
 #include "customizedutil/plblogger.h"
 #include "customizedutil/residualTracer.h"
@@ -311,6 +312,8 @@ int main(int argc, char **argv) {
   boundarySetAndInit(lattice, param.flowParam, geometry);
 
   global::timer("mainloop").start();
+  global::profiler().turnOn();
+
   pluint nx = param.flowParam.getNx();
   pluint ny = param.flowParam.getNy();
   util::ResidualTracer2D<T> residualTracer(1, nx, ny, param.threshold);
@@ -330,7 +333,7 @@ int main(int argc, char **argv) {
   pluint iT = initStep;
 
   PLOG(plog::info) << "starting main loop...";
-  for (; iT * deltaT < param.maxT; iT++) {
+  for (; iT * deltaT <= param.maxT; iT++) {
     lattice.toggleInternalStatistics(param.ifToggleInternalStatistics);
     if (param.ifToggleInternalStatistics && iT % param.logStep == 0) {
       PLOG(plog::info) << "step " << iT
@@ -406,5 +409,6 @@ int main(int argc, char **argv) {
   PLOG(plog::info) << "number of processors: " << global::mpi().getSize();
   PLOG(plog::info) << "total iteraction step: " << iT;
   PLOG(plog::info) << "total computational time for main loop: " << tEnd;
+  global::profiler().writeReport();
   return EXIT_SUCCESS;
 }
