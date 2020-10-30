@@ -12,6 +12,7 @@
 #include "dataProcessors/dataInitializerWrapper2D.h"
 #include "io/imageWriter.h"
 #include "io/parallelIO.h"
+#include "io/serializerIO_2D.h"
 #include "libraryInterfaces/TINYXML_xmlIO.h"
 #include "multiBlock/multiBlockLattice2D.h"
 #include "multiBlock/multiDataField2D.h"
@@ -47,6 +48,11 @@ struct Param {
   bool ifVtkSave;
   bool ifFiledDataSave;
   bool ifToggleInternalStatistics;
+  bool ifCheckPoint;
+  string checkPointFilePrefix;
+  pluint checkPointStep;
+  bool ifLoadCheckPoint;
+  pluint initStep;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
@@ -85,6 +91,11 @@ struct Param {
     document["io"]["ifFiledDataSave"].read(ifFiledDataSave);
     document["io"]["ifToggleInternalStatistics"].read(
         ifToggleInternalStatistics);
+    document["io"]["ifCheckPoint"].read(ifCheckPoint);
+    document["io"]["checkPointFilePrefix"].read(checkPointFilePrefix);
+    document["io"]["checkPointStep"].read(checkPointStep);
+    document["init"]["ifLoadCheckPoint"].read(ifLoadCheckPoint);
+    document["init"]["initStep"].read(initStep);
   }
 };
 
@@ -147,9 +158,9 @@ private:
   SinglePhaseFlowParam<T> parameters;
 };
 
-void setUpSimulation(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
-                     const SinglePhaseFlowParam<T> flowParam,
-                     unique_ptr<MultiScalarField2D<int>> &geometry) {
+void boundarySetAndInit(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
+                        const SinglePhaseFlowParam<T> flowParam,
+                        unique_ptr<MultiScalarField2D<int>> &geometry) {
   // top and bottom are set as periodic B.C.
   lattice.periodicity().toggle(1, true);
   // inlet and outlet are set as Regularized Dirichlet Velocity B.C.
@@ -236,7 +247,7 @@ T computePermeability(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
   Box2D outlet(nx - 1, nx - 1, 1, ny - 2);
   T densityInlet = computeAverageDensity(lattice, inlet);
   T densityOutlet = computeAverageDensity(lattice, outlet);
-  T deltaP = (densityOutlet - densityInlet) * DESCRIPTOR<T>::cs2;
+  T deltaP = (densityInlet - densityOutlet) * DESCRIPTOR<T>::cs2;
   PLOG(plog::debug) << "inlet average density: " << densityInlet
                     << "; outlet average density: " << densityOutlet
                     << "; delta pressure: " << deltaP;
@@ -252,6 +263,15 @@ T computePermeability(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
       flowParam.getLatticeNu() * meanUDomain / (deltaP / (T)(nx - 1));
   PLOG(plog::info) << "permeability: " << permeability;
   return permeability;
+}
+
+std::string getCheckPointFile(const Param &param, pluint timeStep,
+                              pluint maxDigit = 8) {
+  std::string outputDir = param.outputDir;
+  std::string filePath =
+      outputDir + "/" +
+      createFileName(param.checkPointFilePrefix, timeStep, maxDigit);
+  return filePath;
 }
 
 int main(int argc, char **argv) {
@@ -288,8 +308,9 @@ int main(int argc, char **argv) {
   MultiBlockLattice2D<T, DESCRIPTOR> lattice(
       param.nx, param.ny,
       new BGKdynamics<T, DESCRIPTOR>(param.flowParam.getOmega()));
-  setUpSimulation(lattice, param.flowParam, geometry);
+  boundarySetAndInit(lattice, param.flowParam, geometry);
 
+  global::timer("mainloop").start();
   pluint nx = param.flowParam.getNx();
   pluint ny = param.flowParam.getNy();
   util::ResidualTracer2D<T> residualTracer(1, nx, ny, param.threshold);
@@ -298,9 +319,18 @@ int main(int argc, char **argv) {
   Box2D domain = lattice.getBoundingBox();
   T deltaT = param.flowParam.getDeltaT();
   pluint residualAnalysisStep = param.residualAnalysisStep;
-  pluint iT = 0;
-  global::timer("mainloop").start();
-  for (iT = 0; iT * deltaT < param.maxT; iT++) {
+
+  pluint initStep = 0;
+  if (param.ifLoadCheckPoint) {
+    PLOG(plog::info) << "loading checking point data from time step: "
+                     << param.initStep;
+    loadBinaryBlock(lattice, getCheckPointFile(param, param.initStep));
+    initStep = param.initStep;
+  }
+  pluint iT = initStep;
+
+  PLOG(plog::info) << "starting main loop...";
+  for (; iT * deltaT < param.maxT; iT++) {
     lattice.toggleInternalStatistics(param.ifToggleInternalStatistics);
     if (param.ifToggleInternalStatistics && iT % param.logStep == 0) {
       PLOG(plog::info) << "step " << iT
@@ -310,6 +340,13 @@ int main(int argc, char **argv) {
                        << "; av rho =" << getStoredAverageDensity<T>(lattice);
     }
 
+    if (param.ifCheckPoint && iT % param.checkPointStep == 0 && iT > initStep) {
+      PLOG(plog::info) << "step " << iT
+                       << "; t=" << iT * param.flowParam.getDeltaT()
+                       << "; checking point ...";
+      saveBinaryBlock(lattice, getCheckPointFile(param, iT));
+    }
+
     if (param.ifImSave && iT % param.imSaveStep == 0) {
       PLOG(plog::debug) << "step " << iT
                         << "; t=" << iT * param.flowParam.getDeltaT()
@@ -317,25 +354,27 @@ int main(int argc, char **argv) {
       writeGif(lattice, iT);
     }
 
-    if (param.ifVtkSave && iT % param.vtkSaveStep == 0 && iT > 0) {
+    if (param.ifVtkSave && iT % param.vtkSaveStep == 0 && iT > initStep) {
       PLOG(plog::debug) << "step " << iT
                         << "; t=" << iT * param.flowParam.getDeltaT()
                         << "; Saving VTK file ...";
       writeVTK(lattice, param.flowParam, iT);
     }
 
-    if (param.ifFiledDataSave && iT % param.fieldDataSaveStep == 0 && iT > 0) {
+    if (param.ifFiledDataSave && iT % param.fieldDataSaveStep == 0 &&
+        iT > initStep) {
       PLOG(plog::debug) << "step " << iT
                         << "; t=" << iT * param.flowParam.getDeltaT()
                         << "; Saving field text file...";
       writeField(param.outputDir, lattice, param.flowParam, iT);
     }
 
-    if (iT % residualAnalysisStep == residualAnalysisStep - 1 && iT > 0) {
+    if (iT % residualAnalysisStep == residualAnalysisStep - 1 &&
+        iT > initStep) {
       computeVelocityNorm(lattice, previousVelNorm, domain);
     }
 
-    if (iT % residualAnalysisStep == 0 && iT > 0) {
+    if (iT % residualAnalysisStep == 0 && iT > initStep) {
       computeVelocityNorm(lattice, currentVelNorm, domain);
       PLOG(plog::info) << "step " << iT
                        << "; t=" << iT * param.flowParam.getDeltaT()

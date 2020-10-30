@@ -78,5 +78,10 @@
     "gtest-adapter.supportLocation": true,
     "cSpell.words": [
         "ofile"
-    ]
+    ],
+    "editor.formatOnSave": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "modifications",
+    "errorLens.onSave": true,
+    "oneDarkPro.vivid": true
 }

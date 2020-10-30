@@ -41,7 +41,7 @@
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmp/ </output>
     <!--max physical time-->
-    <maxT> 1e-3 </maxT>
+    <maxT> 6e-3 </maxT>
     <!-- if writ out gif image-->
     <ifImSave>true</ifImSave>
     <!--image file save time step-->
@@ -55,11 +55,24 @@
     <!--field data save time step-->
     <fieldDataSaveStep> 5000 </fieldDataSaveStep>
     <!--residual measure time step-->
-    <residualAnalysisStep> 1000 </residualAnalysisStep>
+    <residualAnalysisStep> 2000 </residualAnalysisStep>
     <!--log time step-->
-    <logStep> 1000 </logStep>
+    <logStep> 2000 </logStep>
     <!-- log level-->
-    <logLevel> debug </logLevel>
+    <logLevel> info </logLevel>
     <!-- if toggle internal statistics-->
     <ifToggleInternalStatistics> false </ifToggleInternalStatistics>
+    <!-- if check point-->
+    <ifCheckPoint> true</ifCheckPoint>
+    <!-- check point file prefix-->
+    <checkPointFilePrefix>checkpoint</checkPointFilePrefix>
+    <!-- check point time step-->
+    <checkPointStep>5000</checkPointStep>
 </io>
+
+<init> 
+    <!-- if load check point-->
+    <ifLoadCheckPoint>true</ifLoadCheckPoint>
+    <!-- init time step-->
+    <initStep>5000</initStep>
+</init>
