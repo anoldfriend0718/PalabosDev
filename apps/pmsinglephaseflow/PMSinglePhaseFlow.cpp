@@ -4,6 +4,8 @@
 #include "core/globalDefs.h"
 #include "core/plbInit.h"
 #include "core/runTimeDiagnostics.h"
+#include "customizedutil/residualTracer.h"
+#include "customizedutil/residualTracer.hh"
 #include "dataProcessors/dataInitializerWrapper2D.h"
 #include "io/imageWriter.h"
 #include "io/parallelIO.h"
@@ -27,13 +29,18 @@ struct Param {
   pluint ny;
   SinglePhaseFlowParam<T> flowParam;
   T threshold;
+  pluint logStep;
+  pluint imSaveStep;
+  pluint vtkSaveStep;
+  pluint fieldDataSaveStep;
+  pluint residualAnalysisStep;
+  T maxT;
   Param() = default;
   Param(string configXmlName) {
     XMLreader document(configXmlName);
     document["geometry"]["filename"].read(geometryFile);
     document["geometry"]["nx"].read(nx);
     document["geometry"]["ny"].read(ny);
-    document["io"]["output"].read(outputDir);
     T physicalU;
     pluint latticeCharacteristicLength;
     T resolution;
@@ -53,6 +60,13 @@ struct Param {
                                         latticeCharacteristicLength, resolution,
                                         latticeLx, latticeLy);
     document["simuParam"]["resolution"].read(threshold);
+    document["io"]["output"].read(outputDir);
+    document["io"]["logStep"].read(logStep);
+    document["io"]["imSaveStep"].read(imSaveStep);
+    document["io"]["vtkSaveStep"].read(vtkSaveStep);
+    document["io"]["fieldDataSaveStep"].read(fieldDataSaveStep);
+    document["io"]["residualAnalysisStep"].read(residualAnalysisStep);
+    document["io"]["maxT"].read(maxT);
   }
 };
 
@@ -101,19 +115,20 @@ private:
   SinglePhaseFlowParam<T> parameters;
 };
 
-template <typename T> class PoiseuilleVelocityAndConstDensity {
+template <typename T> class ZeroVelocityAndConstDensity {
 public:
-  PoiseuilleVelocityAndConstDensity(SinglePhaseFlowParam<T> parameters_)
+  ZeroVelocityAndConstDensity(SinglePhaseFlowParam<T> parameters_)
       : parameters(parameters_) {}
   void operator()(plint iX, plint iY, T &rho, Array<T, 2> &u) const {
     rho = 1.0;
-    u[0] = poiseuilleVelocityProfile(iY, parameters);
+    u[0] = 0.0;
     u[1] = T();
   }
 
 private:
   SinglePhaseFlowParam<T> parameters;
 };
+
 void setUpSimulation(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
                      const SinglePhaseFlowParam<T> flowParam,
                      unique_ptr<MultiScalarField2D<int>> &geometry) {
@@ -138,9 +153,60 @@ void setUpSimulation(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
   defineDynamics(lattice, *geometry, new NoDynamics<T, DESCRIPTOR>(), 2);
 
   initializeAtEquilibrium(lattice, lattice.getBoundingBox(),
-                          PoiseuilleVelocityAndConstDensity<T>(flowParam));
+                          ZeroVelocityAndConstDensity<T>(flowParam));
   lattice.initialize();
   pcout << "simulation is set up" << endl;
+}
+
+void writeGif(MultiBlockLattice2D<T, DESCRIPTOR> &lattice, plint iter,
+              plint maxdigit = 8) {
+  ImageWriter<T> imageWriter("leeloo");
+  imageWriter.writeScaledGif(createFileName("u", iter, maxdigit),
+                             *computeVelocityNorm(lattice));
+  imageWriter.writeScaledGif(createFileName("rho", iter, maxdigit),
+                             *computeDensity(lattice));
+}
+
+void writeVTK(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
+              SinglePhaseFlowParam<T> const &parameters, plint iter,
+              plint maxdigit = 8) {
+  T dx = parameters.getDeltaX();
+  T dt = parameters.getDeltaT();
+  VtkImageOutput2D<T> vtkOut(createFileName("vtk", iter, maxdigit), dx);
+  vtkOut.writeData<float>(*computeVelocityNorm(lattice), "velocityNorm",
+                          dx / dt);
+  vtkOut.writeData<2, float>(*computeVelocity(lattice), "velocity", dx / dt);
+}
+
+void writeField(const string outputDir,
+                MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
+                SinglePhaseFlowParam<T> const &parameters, plint iter,
+                plint maxdigit = 8) {
+  T dx = parameters.getDeltaX();
+  T dt = parameters.getDeltaT();
+  int precision = 6;
+  // density
+  const string densityFileName =
+      outputDir + createFileName("density", iter, maxdigit) + ".dat";
+  plb_ofstream densityFileStream(densityFileName.c_str());
+  densityFileStream << setprecision(precision)
+                    << *computeDensity(lattice, lattice.getBoundingBox());
+  // velocity norm
+  const string velocityNormFileName =
+      outputDir + createFileName("velocityNorm", iter, maxdigit) + ".dat";
+  plb_ofstream velocityNormFileStream(velocityNormFileName.c_str());
+  velocityNormFileStream << setprecision(precision)
+                         << *multiply(dx / dt,
+                                      *computeVelocityNorm(
+                                          lattice, lattice.getBoundingBox()));
+  // velocity components
+  const string velocityFileName =
+      outputDir + createFileName("velocity", iter, maxdigit) + ".dat";
+  plb_ofstream velocityFileStream(velocityFileName.c_str());
+  velocityFileStream << setprecision(precision)
+                     << *multiply(dx / dt,
+                                  *computeVelocity(lattice,
+                                                   lattice.getBoundingBox()));
 }
 
 int main(int argc, char **argv) {
@@ -172,5 +238,68 @@ int main(int argc, char **argv) {
       new BGKdynamics<T, DESCRIPTOR>(param.flowParam.getOmega()));
   setUpSimulation(lattice, param.flowParam, geometry);
 
+  pluint nx = param.flowParam.getNx();
+  pluint ny = param.flowParam.getNy();
+  util::ResidualTracer2D<T> residualTracer(1, nx, ny, param.threshold);
+  MultiScalarField2D<T> previousVelNorm(nx, ny);
+  MultiScalarField2D<T> currentVelNorm(nx, ny);
+  Box2D domain = lattice.getBoundingBox();
+  T deltaT = param.flowParam.getDeltaT();
+  pluint residualAnalysisStep = param.residualAnalysisStep;
+  pluint iT = 0;
+  for (iT = 0; iT * deltaT < param.maxT; iT++) {
+
+    if (iT % param.logStep == 0) {
+      pcout << "step " << iT << "; t=" << iT * param.flowParam.getDeltaT()
+            << "; av energy =" << setprecision(10)
+            << getStoredAverageEnergy<T>(lattice)
+            << "; av rho =" << getStoredAverageDensity<T>(lattice) << endl;
+    }
+
+    if (iT % param.imSaveStep == 0) {
+      pcout << "Saving Gif ..." << endl;
+      writeGif(lattice, iT);
+    }
+
+    if (iT % param.vtkSaveStep == 0 && iT > 0) {
+      pcout << "Saving VTK file ..." << endl;
+      writeVTK(lattice, param.flowParam, iT);
+    }
+
+    if (iT % param.fieldDataSaveStep == 0 && iT > 0) {
+      pcout << "Saving field text file..." << endl;
+      writeField(param.outputDir, lattice, param.flowParam, iT);
+    }
+
+    if (iT % residualAnalysisStep == residualAnalysisStep - 1 && iT > 0) {
+      computeVelocityNorm(lattice, previousVelNorm, domain);
+    }
+
+    if (iT % residualAnalysisStep == 0 && iT > 0) {
+      computeVelocityNorm(lattice, currentVelNorm, domain);
+      residualTracer.measure(currentVelNorm, previousVelNorm, domain, true);
+    }
+
+    if (residualTracer.hasConverged()) {
+      break;
+    }
+
+    // Lattice Boltzmann iteration step.
+    lattice.collideAndStream();
+
+    // At this point, the state of the lattice corresponds to the
+    //   discrete time iT+1, and the stored averages are upgraded to time iT.
+  }
+
+  pcout << "write out the fields at the final step..." << endl;
+  writeGif(lattice, iT);
+  writeVTK(lattice, param.flowParam, iT);
+  writeField(param.outputDir, lattice, param.flowParam, iT);
+
+  global::timer("mainloop").start();
+  T tEnd = global::timer("mainloop").stop();
+  pcout << "number of processors: " << global::mpi().getSize() << endl;
+  pcout << "total iteraction step: " << iT << endl;
+  pcout << "total computational time for main loop: " << tEnd << endl;
   return 0;
 }

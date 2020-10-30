@@ -41,9 +41,15 @@
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmp/ </output>
     <!--max physical time-->
-    <maxT> 20.1 </maxT>
-    <!--output time step-->
-    <outputT> 1.0 </outputT>
+    <maxT> 1 </maxT>
+    <!--image file save time step-->
+    <imSaveStep> 1000 </imSaveStep>
+    <!--vtk file save time step-->
+    <vtkSaveStep> 1000 </vtkSaveStep>
+    <!--field data save time step-->
+    <fieldDataSaveStep> 1000 </fieldDataSaveStep>
+    <!--residual measure time step-->
+    <residualAnalysisStep> 1000 </residualAnalysisStep>
     <!--log time step-->
-    <logT> 0.1 </logT>
+    <logStep> 1000 </logStep>
 </io>
