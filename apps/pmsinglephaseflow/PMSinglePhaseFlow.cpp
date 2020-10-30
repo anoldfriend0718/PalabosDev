@@ -4,6 +4,7 @@
 #include "core/globalDefs.h"
 #include "core/plbInit.h"
 #include "core/runTimeDiagnostics.h"
+#include "customizedutil/plblogger.h"
 #include "customizedutil/residualTracer.h"
 #include "customizedutil/residualTracer.hh"
 #include "dataProcessors/dataInitializerWrapper2D.h"
@@ -14,7 +15,9 @@
 #include "multiBlock/multiDataField2D.h"
 #include "palabos2D.h"
 #include "palabos2D.hh"
+#include "plog/Severity.h"
 #include <memory>
+#include <plog/Formatters/TxtFormatter.h>
 
 using namespace plb;
 using namespace std;
@@ -155,7 +158,7 @@ void setUpSimulation(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
   initializeAtEquilibrium(lattice, lattice.getBoundingBox(),
                           ZeroVelocityAndConstDensity<T>(flowParam));
   lattice.initialize();
-  pcout << "simulation is set up" << endl;
+  PLOG(plog::info) << "simulation is set up";
 }
 
 void writeGif(MultiBlockLattice2D<T, DESCRIPTOR> &lattice, plint iter,
@@ -211,24 +214,28 @@ void writeField(const string outputDir,
 
 int main(int argc, char **argv) {
   plbInit(&argc, &argv);
+  // initialize the logger
+  static plb::util::PlbLoggerAppender<plog::TxtFormatter> plbAppender;
+  plog::init(plog::debug, &plbAppender);
+
   string configXml;
   try {
     global::argv(1).read(configXml);
 
   } catch (const PlbIOException &ex) {
-    pcerr << "Wrong parameters; the syntax is" << (string)global::argv(0)
-          << " config.xml" << endl;
+    PLOG(plog::error) << "Wrong parameters; the syntax is"
+                      << (string)global::argv(0) << " config.xml";
   }
   Param param;
   try {
     param = Param(configXml);
   } catch (const PlbIOException &ex) {
-    pcerr << "Invaid configuration xml, with error message: " << ex.what()
-          << endl;
+    PLOG(plog::error) << "Invaid configuration xml, with error message: "
+                      << ex.what();
   }
-  pcout << "configuration xml file: " << configXml << endl;
-  pcout << "geometry file: " << param.geometryFile << endl;
-  pcout << "output directory: " << param.outputDir << endl;
+  PLOG(plog::info) << "configuration xml file: " << configXml;
+  PLOG(plog::info) << "geometry file: " << param.geometryFile;
+  PLOG(plog::info) << "output directory: " << param.outputDir;
   global::directories().setOutputDir(param.outputDir);
   param.flowParam.writeLogFile("Berea Stone 2D flow");
 
@@ -250,24 +257,25 @@ int main(int argc, char **argv) {
   for (iT = 0; iT * deltaT < param.maxT; iT++) {
 
     if (iT % param.logStep == 0) {
-      pcout << "step " << iT << "; t=" << iT * param.flowParam.getDeltaT()
-            << "; av energy =" << setprecision(10)
-            << getStoredAverageEnergy<T>(lattice)
-            << "; av rho =" << getStoredAverageDensity<T>(lattice) << endl;
+      PLOG(plog::info) << "step " << iT
+                       << "; t=" << iT * param.flowParam.getDeltaT()
+                       << "; av energy =" << setprecision(10)
+                       << getStoredAverageEnergy<T>(lattice)
+                       << "; av rho =" << getStoredAverageDensity<T>(lattice);
     }
 
     if (iT % param.imSaveStep == 0) {
-      pcout << "Saving Gif ..." << endl;
+      PLOG(plog::debug) << "Saving Gif ...";
       writeGif(lattice, iT);
     }
 
     if (iT % param.vtkSaveStep == 0 && iT > 0) {
-      pcout << "Saving VTK file ..." << endl;
+      PLOG(plog::debug) << "Saving VTK file ...";
       writeVTK(lattice, param.flowParam, iT);
     }
 
     if (iT % param.fieldDataSaveStep == 0 && iT > 0) {
-      pcout << "Saving field text file..." << endl;
+      PLOG(plog::debug) << "Saving field text file...";
       writeField(param.outputDir, lattice, param.flowParam, iT);
     }
 
@@ -291,15 +299,15 @@ int main(int argc, char **argv) {
     //   discrete time iT+1, and the stored averages are upgraded to time iT.
   }
 
-  pcout << "write out the fields at the final step..." << endl;
+  PLOG(plog::info) << "write out the fields at the final step...";
   writeGif(lattice, iT);
   writeVTK(lattice, param.flowParam, iT);
   writeField(param.outputDir, lattice, param.flowParam, iT);
 
   global::timer("mainloop").start();
   T tEnd = global::timer("mainloop").stop();
-  pcout << "number of processors: " << global::mpi().getSize() << endl;
-  pcout << "total iteraction step: " << iT << endl;
-  pcout << "total computational time for main loop: " << tEnd << endl;
+  PLOG(plog::info) << "number of processors: " << global::mpi().getSize();
+  PLOG(plog::info) << "total iteraction step: " << iT;
+  PLOG(plog::info) << "total computational time for main loop: " << tEnd;
   return 0;
 }

@@ -3,7 +3,7 @@
     // "C_Cpp.intelliSenseEngine": "Tag Parser",
     // "C_Cpp.intelliSenseEngineFallback": "Enabled",
     "C_Cpp.intelliSenseEngine": "Disabled",
-    "C_Cpp.autocomplete": "Disabled",  // So you don't get autocomplete from both extensions.
+    "C_Cpp.autocomplete": "Disabled", // So you don't get autocomplete from both extensions.
     "C_Cpp.errorSquiggles": "Disabled", // So you don't get error squiggles from both extensions (clangd's seem to be more reliable anyway).
     "clangd.path": "/usr/bin/clangd",
     "clangd.arguments": ["-log=verbose", "-pretty", "--background-index", "--compile-commands-dir=${workspaceFolder}/build"],
@@ -24,9 +24,9 @@
         "CMAKE_TOOLCHAIN_FILE": "/home/anoldfriend/Workspace/MyRepo/vcpkg/scripts/buildsystems/vcpkg.cmake"
     },
     "switcher.findSuffixOrder": [
-    ".cpp",
-    ".h",
-    ".hh"
+        ".cpp",
+        ".h",
+        ".hh"
     ],
     "files.associations": {
         "*.tcc": "cpp",
@@ -34,12 +34,11 @@
         "**/constant/g": "OpenFOAM",
         "*Dict": "OpenFOAM",
         "*Properties": "OpenFOAM",
-        "*.hh":"cpp",
+        "*.hh": "cpp",
     },
     "workbench.editor.enablePreviewFromQuickOpen": false,
     "editor.tokenColorCustomizations": {
-        "textMateRules": [
-            {
+        "textMateRules": [{
                 "scope": "googletest.failed",
                 "settings": {
                     "foreground": "#f00"
@@ -55,6 +54,20 @@
                 "scope": "googletest.run",
                 "settings": {
                     "foreground": "#0f0"
+                }
+            },
+            {
+                "scope": "log.error",
+                "settings": {
+                    "foreground": "#af1f1f",
+                    "fontStyle": "bold"
+                }
+            },
+            {
+                "scope": "log.warning",
+                "settings": {
+                    "foreground": "#f4ad42",
+                    "fontStyle": ""
                 }
             }
         ]

@@ -111,6 +111,8 @@ else()
     add_library(${PALABOS_LIB_NAME} STATIC ${PALABOS_SRC} ${EXT_SRC})
 endif()
 
+find_path(PLOG_INCLUDE_DIRS "plog/Appenders/AndroidAppender.h")
+include_directories(${PLOG_INCLUDE_DIRS})
 ###############################################################################
 # CUSTOMIZED PALABOS DIRECTORIES
 ###############################################################################

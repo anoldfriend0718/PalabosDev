@@ -30,7 +30,7 @@
     <!--length y-->
     <latticeLy> 990 </latticeLy>
     <!--length per pixel-->
-    <resolution> 1e-6 </resolution>
+    <resolution> 1e-5 </resolution>
     <!--characteristic length with lattice unit-->
     <latticeCharacteristicLength>100</latticeCharacteristicLength>
     <!--converage threshold-->
