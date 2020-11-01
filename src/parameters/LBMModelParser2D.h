@@ -1,13 +1,15 @@
+#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.hh"
-#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "core/dynamicsIdentifiers.h"
 #include "core/globalDefs.h"
 #include "core/plbDebug.h"
 #include "latticeBoltzmann/nearestNeighborLattices2D.h"
 #include "plog/Log.h"
+#include <map>
 #include <memory>
 #include <plog/Severity.h>
+#include <string>
 
 namespace plb {
 enum DynamicsName { BGK_Ma2 = 0, RM, HM, CM, CHM, K, GH, RR };
@@ -23,6 +25,10 @@ public:
     setOmega(hoOmega);
     setAllHOOmega();
   }
+
+  LBMModelParser2D(std::string dynamicsName, std::string hoOmegaName, T omega_)
+      : LBMModelParser2D(dynamicsNameMap.at(dynamicsName),
+                         hoOmegaMap.at(hoOmegaName), omega_) {}
 
   LBMModelParser2D() = default;
 
@@ -41,6 +47,9 @@ private:
   DynamicsName dynamicsName;
   T omega;
   Array<T, Descriptor<T>::numRelaxationTimes> allOmega;
+
+  static const std::map<std::string, DynamicsName> dynamicsNameMap;
+  static const std::map<std::string, HOOmega> hoOmegaMap;
 
   void setDynamics(DynamicsName &dynamics) {
     switch (dynamics) {
@@ -130,4 +139,13 @@ private:
     }
   }
 };
+
+template <typename T, template <typename U> class Descriptor>
+const std::map<std::string, DynamicsName>
+    LBMModelParser2D<T, Descriptor>::dynamicsNameMap = {{"BGK_Ma2", BGK_Ma2}};
+
+template <typename T, template <typename U> class Descriptor>
+const std::map<std::string, HOOmega>
+    LBMModelParser2D<T, Descriptor>::hoOmegaMap = {{"SRT", SRT}};
+
 } // namespace plb

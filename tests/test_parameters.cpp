@@ -113,4 +113,12 @@ TEST(LBMModelParameter,TestIfSetCorrectAllOmega)
   ASSERT_EQ(allOmega[2], 1.0);
   ASSERT_EQ(allOmega[3], 1.0);
 }
+
+TEST(LBMModelParameter, TestIfCorrectConstructionByString)
+{
+  LBMModelParser2D<T, DESCRIPTOR> lbmModel1("BGK_Ma2","SRT",1.2);
+  ASSERT_EQ(getDynamicsName(lbmModel1), "BGK");
+  ASSERT_EQ(lbmModel1.getAllOmega()[0], 1.2);
+
+}
 // CHM, K, GH, RR
