@@ -41,7 +41,7 @@
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmp/ </output>
     <!--max physical time-->
-    <maxT> 6e-3 </maxT>
+    <maxT> 5.01e-3 </maxT>
     <!-- if writ out gif image-->
     <ifImSave>true</ifImSave>
     <!--image file save time step-->

@@ -40,16 +40,25 @@ message("PALABOS_LIB_DIRECTORY:" ${PALABOS_LIB_DIRECTORY})
 
 # Compiler flags
 # Append flags: set(CMAKE_XXX_FLAGS "${CMAKE_XXX_FLAGS} ...")
+
+# 其中-g表示使用debug编译,
+# -ggdb：在可执行文件中包含可供GDB使用的调试信息
+# -O0 表示编译时不优化,关闭所有优化选项
+# -Wall 开启大部分警告提示
+# -fstack-protector-all 保护栈信息
+# 使用 -march=native，GCC会自动检测你的CPU支持的指令集。
+# -fnon-call-exceptions 产生的代码可供陷阱指令(如非法浮点运算和非法内存寻址)抛出异常，需要相关平台的运行时支持，并不普遍有效
+
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
     message("GCC.")
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wnon-virtual-dtor")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -DPLB_DEBUG -O0")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -DPLB_DEBUG -O0 -fstack-protector-all -march=native -fnon-call-exceptions")
 elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
     message("Clang.")
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wnon-virtual-dtor")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -DPLB_DEBUG -O0")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -DPLB_DEBUG -O0 -fstack-protector-all -march=native -fnon-call-exceptions")
 elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     message("MSVC.")
     set(CMAKE_CXX_FLAGS_RELEASE "/Ox /Ot /GS- /GL /DNDEBUG")

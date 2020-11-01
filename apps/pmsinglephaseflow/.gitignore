@@ -2,3 +2,4 @@ PMSinglePhaseFlow
 temp*
 *.log
 tmp_*
+core*

@@ -19,13 +19,13 @@
 #include "multiBlock/multiDataField2D.h"
 #include "palabos2D.h"
 #include "palabos2D.hh"
+#include "parameters/LBMModelParser2D.h"
+#include "parameters/LBMModelParser2D.hh"
 #include "plog/Log.h"
 #include "plog/Severity.h"
 #include <cstdlib>
 #include <memory>
 #include <plog/Formatters/TxtFormatter.h>
-#include "parameters/LBMModelParser2D.h"
-#include "parameters/LBMModelParser2D.hh"
 
 using namespace plb;
 using namespace std;
@@ -322,9 +322,10 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<Dynamics<T, DESCRIPTOR>> dynamics =
       param.lbmPara.getDynamics();
-  
+  // lattice help release the dnamics pointer, therefore we need to clone
+  // dynamics object to avoid duplicated deleting same pointer
   MultiBlockLattice2D<T, DESCRIPTOR> lattice(param.nx, param.ny,
-                                                      dynamics.get());
+                                             dynamics->clone());
   boundarySetAndInit(lattice, param.flowParam, geometry);
 
   global::timer("mainloop").start();
