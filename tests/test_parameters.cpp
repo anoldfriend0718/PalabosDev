@@ -5,6 +5,7 @@
 #include <plog/Severity.h>
 #include "parameters/singlePhaseFlowParameters.h"
 #include "parameters/LBMModelParser2D.h"
+#include "parameters/LBMModelParser2D.hh"
 #include "basicDynamics/isoThermalDynamics.h"
 #include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 

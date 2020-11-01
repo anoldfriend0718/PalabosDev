@@ -25,6 +25,7 @@
 #include <memory>
 #include <plog/Formatters/TxtFormatter.h>
 #include "parameters/LBMModelParser2D.h"
+#include "parameters/LBMModelParser2D.hh"
 
 using namespace plb;
 using namespace std;
