@@ -1,8 +1,9 @@
 #pragma once
 
-#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
+
 #include "basicDynamics/isoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.hh"
+#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "core/dynamicsIdentifiers.h"
 #include "core/globalDefs.h"
 #include "core/plbDebug.h"

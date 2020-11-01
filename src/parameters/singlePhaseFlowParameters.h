@@ -1,9 +1,15 @@
+#pragma once
+
 #include "core/globalDefs.h"
 #include "io/parallelIO.h"
 #include "plog/Log.h"
 #include "plog/Severity.h"
 #include <iostream>
-using namespace plb;
+#include "libraryInterfaces/TINYXML_xmlIO.h"
+#include "parameters/LBMModelParser2D.h"
+
+namespace plb
+{
 
 /// Numeric parameters for isothermal, incompressible flow.
 template <typename T> class SinglePhaseFlowParam {
@@ -102,3 +108,90 @@ private:
   T resolution;
   pluint latticeLx, latticeLy, latticeLz;
 };
+
+template <typename T, template <typename U> class Descriptor>
+struct SinglePhaseFlowCaseParam {
+  std::string geometryFile;
+  std::string outputDir;
+  pluint nx;
+  pluint ny;
+  SinglePhaseFlowParam<T> flowParam;
+  T threshold;
+  pluint logStep;
+  pluint imSaveStep;
+  pluint vtkSaveStep;
+  pluint fieldDataSaveStep;
+  pluint residualAnalysisStep;
+  T maxT;
+  std::string logLevel;
+  bool ifImSave;
+  bool ifVtkSave;
+  bool ifFiledDataSave;
+  bool ifToggleInternalStatistics;
+  bool ifCheckPoint;
+  std::string checkPointFilePrefix;
+  pluint checkPointStep;
+  bool ifLoadCheckPoint;
+  pluint initStep;
+  LBMModelParser2D<T, Descriptor> lbmPara;
+  SinglePhaseFlowCaseParam() = default;
+  SinglePhaseFlowCaseParam(std::string configXmlName) {
+    XMLreader document(configXmlName);
+    document["geometry"]["filename"].read(geometryFile);
+    document["geometry"]["nx"].read(nx);
+    document["geometry"]["ny"].read(ny);
+    T physicalU;
+    pluint latticeCharacteristicLength;
+    T resolution;
+    T re;
+    T latticeU;
+    pluint latticeLx;
+    pluint latticeLy;
+
+    document["simuParam"]["physicalU"].read(physicalU);
+    document["simuParam"]["latticeU"].read(latticeU);
+    document["simuParam"]["re"].read(re);
+    document["simuParam"]["latticeLx"].read(latticeLx);
+    document["simuParam"]["latticeLy"].read(latticeLy);
+    document["simuParam"]["resolution"].read(resolution);
+    document["simuParam"]["latticeCharacteristicLength"].read(
+        latticeCharacteristicLength);
+    flowParam = SinglePhaseFlowParam<T>(physicalU, latticeU, re,
+                                        latticeCharacteristicLength, resolution,
+                                        latticeLx, latticeLy);
+    document["simuParam"]["resolution"].read(threshold);
+    document["io"]["output"].read(outputDir);
+    document["io"]["logStep"].read(logStep);
+    document["io"]["imSaveStep"].read(imSaveStep);
+    document["io"]["vtkSaveStep"].read(vtkSaveStep);
+    document["io"]["fieldDataSaveStep"].read(fieldDataSaveStep);
+    document["io"]["residualAnalysisStep"].read(residualAnalysisStep);
+    document["io"]["maxT"].read(maxT);
+    document["io"]["logLevel"].read(logLevel);
+    document["io"]["ifImSave"].read(ifImSave);
+    document["io"]["ifVtkSave"].read(ifVtkSave);
+    document["io"]["ifFiledDataSave"].read(ifFiledDataSave);
+    document["io"]["ifToggleInternalStatistics"].read(
+        ifToggleInternalStatistics);
+    document["io"]["ifCheckPoint"].read(ifCheckPoint);
+    document["io"]["checkPointFilePrefix"].read(checkPointFilePrefix);
+    document["io"]["checkPointStep"].read(checkPointStep);
+    document["init"]["ifLoadCheckPoint"].read(ifLoadCheckPoint);
+    document["init"]["initStep"].read(initStep);
+
+    std::string lbm;
+    std::string dynName;
+    std::string hoOmega;
+    document["lattice"]["lbm"].read(lbm);
+    document["lattice"]["dynName"].read(dynName);
+    document["lattice"]["hoOmega"].read(hoOmega);
+    lbmPara =
+        LBMModelParser2D<T, Descriptor>(dynName, hoOmega, flowParam.getOmega());
+  }
+};
+
+
+
+}
+
+

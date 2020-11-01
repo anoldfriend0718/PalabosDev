@@ -1,4 +1,4 @@
-#include "../../src/parameters/singlePhaseFlowParameters.h"
+
 #include "basicDynamics/isoThermalDynamics.h"
 #include "boundaryCondition/boundaryCondition.h"
 #include "core/globalDefs.h"
@@ -8,6 +8,8 @@
 #include "customizedutil/plblogger.h"
 #include "customizedutil/residualTracer.h"
 #include "customizedutil/residualTracer.hh"
+#include "customizedutil/singlePhaseFlowUtities.h"
+#include "customizedutil/utilities.h"
 #include "dataProcessors/dataAnalysisWrapper2D.h"
 #include "dataProcessors/dataAnalysisWrapper3D.h"
 #include "dataProcessors/dataInitializerWrapper2D.h"
@@ -21,6 +23,7 @@
 #include "palabos2D.hh"
 #include "parameters/LBMModelParser2D.h"
 #include "parameters/LBMModelParser2D.hh"
+#include "parameters/singlePhaseFlowParameters.h"
 #include "plog/Log.h"
 #include "plog/Severity.h"
 #include <cstdlib>
@@ -28,135 +31,11 @@
 #include <plog/Formatters/TxtFormatter.h>
 
 using namespace plb;
+using namespace plb::util::sp;
 using namespace std;
 
 #define DESCRIPTOR descriptors::D2Q9Descriptor
 typedef double T;
-
-struct Param {
-  string geometryFile;
-  string outputDir;
-  pluint nx;
-  pluint ny;
-  SinglePhaseFlowParam<T> flowParam;
-  T threshold;
-  pluint logStep;
-  pluint imSaveStep;
-  pluint vtkSaveStep;
-  pluint fieldDataSaveStep;
-  pluint residualAnalysisStep;
-  T maxT;
-  std::string logLevel;
-  bool ifImSave;
-  bool ifVtkSave;
-  bool ifFiledDataSave;
-  bool ifToggleInternalStatistics;
-  bool ifCheckPoint;
-  string checkPointFilePrefix;
-  pluint checkPointStep;
-  bool ifLoadCheckPoint;
-  pluint initStep;
-  LBMModelParser2D<T, DESCRIPTOR> lbmPara;
-  Param() = default;
-  Param(string configXmlName) {
-    XMLreader document(configXmlName);
-    document["geometry"]["filename"].read(geometryFile);
-    document["geometry"]["nx"].read(nx);
-    document["geometry"]["ny"].read(ny);
-    T physicalU;
-    pluint latticeCharacteristicLength;
-    T resolution;
-    T re;
-    T latticeU;
-    pluint latticeLx;
-    pluint latticeLy;
-
-    document["simuParam"]["physicalU"].read(physicalU);
-    document["simuParam"]["latticeU"].read(latticeU);
-    document["simuParam"]["re"].read(re);
-    document["simuParam"]["latticeLx"].read(latticeLx);
-    document["simuParam"]["latticeLy"].read(latticeLy);
-    document["simuParam"]["resolution"].read(resolution);
-    document["simuParam"]["latticeCharacteristicLength"].read(
-        latticeCharacteristicLength);
-    flowParam = SinglePhaseFlowParam<T>(physicalU, latticeU, re,
-                                        latticeCharacteristicLength, resolution,
-                                        latticeLx, latticeLy);
-    document["simuParam"]["resolution"].read(threshold);
-    document["io"]["output"].read(outputDir);
-    document["io"]["logStep"].read(logStep);
-    document["io"]["imSaveStep"].read(imSaveStep);
-    document["io"]["vtkSaveStep"].read(vtkSaveStep);
-    document["io"]["fieldDataSaveStep"].read(fieldDataSaveStep);
-    document["io"]["residualAnalysisStep"].read(residualAnalysisStep);
-    document["io"]["maxT"].read(maxT);
-    document["io"]["logLevel"].read(logLevel);
-    document["io"]["ifImSave"].read(ifImSave);
-    document["io"]["ifVtkSave"].read(ifVtkSave);
-    document["io"]["ifFiledDataSave"].read(ifFiledDataSave);
-    document["io"]["ifToggleInternalStatistics"].read(
-        ifToggleInternalStatistics);
-    document["io"]["ifCheckPoint"].read(ifCheckPoint);
-    document["io"]["checkPointFilePrefix"].read(checkPointFilePrefix);
-    document["io"]["checkPointStep"].read(checkPointStep);
-    document["init"]["ifLoadCheckPoint"].read(ifLoadCheckPoint);
-    document["init"]["initStep"].read(initStep);
-
-    string lbm;
-    string dynName;
-    string hoOmega;
-    document["lattice"]["lbm"].read(lbm);
-    document["lattice"]["dynName"].read(dynName);
-    document["lattice"]["hoOmega"].read(hoOmega);
-    lbmPara =
-        LBMModelParser2D<T, DESCRIPTOR>(dynName, hoOmega, flowParam.getOmega());
-  }
-};
-
-std::string GetFileName(const std::string path, const string seperator) {
-  string::size_type iPos = path.find_last_of(seperator) + 1;
-  string filename = path.substr(iPos, path.length() - iPos);
-  string name = filename.substr(0, filename.rfind("."));
-  return name;
-}
-
-unique_ptr<MultiScalarField2D<int>>
-readGeomtry(const Param &param, bool isWriteGeometryImage = true) {
-  unique_ptr<MultiScalarField2D<int>> geometry(
-      new MultiScalarField2D<int>(param.nx, param.ny));
-  plb_ifstream geometryFileStream(param.geometryFile.c_str());
-  geometryFileStream >> *geometry;
-  if (isWriteGeometryImage) {
-    ImageWriter<int> geometryImageWriter("leeloo");
-    const string seperator = "/";
-    string imageFileName = GetFileName(param.geometryFile, seperator);
-    geometryImageWriter.writeScaledGif(imageFileName, *geometry);
-    PLOG(plog::info) << "geometry image is output: " << param.outputDir
-                     << seperator << imageFileName << ".gif" << endl;
-  }
-  return geometry;
-}
-
-/// Velocity on the parabolic Poiseuille profile
-T poiseuilleVelocityProfile(plint iY,
-                            SinglePhaseFlowParam<T> const &parameters) {
-  T y = (T)iY / parameters.getNy();
-  return 4. * parameters.getLatticeU() * (y - y * y);
-}
-
-/// A functional, used to initialize the velocity for the boundary conditions
-template <typename T> class PoiseuilleVelocity {
-public:
-  PoiseuilleVelocity(SinglePhaseFlowParam<T> parameters_)
-      : parameters(parameters_) {}
-  void operator()(plint iX, plint iY, Array<T, 2> &u) const {
-    u[0] = poiseuilleVelocityProfile(iY, parameters);
-    u[1] = T();
-  }
-
-private:
-  SinglePhaseFlowParam<T> parameters;
-};
 
 template <typename T> class ZeroVelocityAndConstDensity {
 public:
@@ -188,7 +67,7 @@ void boundarySetAndInit(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
   boundaryCondition->setVelocityConditionOnBlockBoundaries(lattice, outlet,
                                                            boundary::outflow);
   setBoundaryVelocity(lattice, lattice.getBoundingBox(),
-                      PoiseuilleVelocity<T>(flowParam));
+                      plb::util::sp::PoiseuilleVelocity<T>(flowParam));
 
   // Where "geometry" evaluates to 1, use bounce-back.
   defineDynamics(lattice, *geometry, new BounceBack<T, DESCRIPTOR>(), 1);
@@ -201,86 +80,9 @@ void boundarySetAndInit(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
   PLOG(plog::info) << "simulation is set up";
 }
 
-void writeGif(MultiBlockLattice2D<T, DESCRIPTOR> &lattice, plint iter,
-              plint maxdigit = 8) {
-  ImageWriter<T> imageWriter("leeloo");
-  imageWriter.writeScaledGif(createFileName("u", iter, maxdigit),
-                             *computeVelocityNorm(lattice));
-  imageWriter.writeScaledGif(createFileName("rho", iter, maxdigit),
-                             *computeDensity(lattice));
-}
-
-void writeVTK(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
-              SinglePhaseFlowParam<T> const &parameters, plint iter,
-              plint maxdigit = 8) {
-  T dx = parameters.getDeltaX();
-  T dt = parameters.getDeltaT();
-  VtkImageOutput2D<T> vtkOut(createFileName("vtk", iter, maxdigit), dx);
-  vtkOut.writeData<float>(*computeVelocityNorm(lattice), "velocityNorm",
-                          dx / dt);
-  vtkOut.writeData<2, float>(*computeVelocity(lattice), "velocity", dx / dt);
-}
-
-void writeField(const string outputDir,
-                MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
-                SinglePhaseFlowParam<T> const &parameters, plint iter,
-                plint maxdigit = 8) {
-  T dx = parameters.getDeltaX();
-  T dt = parameters.getDeltaT();
-  int precision = 6;
-  // density
-  const string densityFileName =
-      outputDir + createFileName("density", iter, maxdigit) + ".dat";
-  plb_ofstream densityFileStream(densityFileName.c_str());
-  densityFileStream << setprecision(precision)
-                    << *computeDensity(lattice, lattice.getBoundingBox());
-  // velocity norm
-  const string velocityNormFileName =
-      outputDir + createFileName("velocityNorm", iter, maxdigit) + ".dat";
-  plb_ofstream velocityNormFileStream(velocityNormFileName.c_str());
-  velocityNormFileStream << setprecision(precision)
-                         << *multiply(dx / dt,
-                                      *computeVelocityNorm(
-                                          lattice, lattice.getBoundingBox()));
-  // velocity components
-  const string velocityFileName =
-      outputDir + createFileName("velocity", iter, maxdigit) + ".dat";
-  plb_ofstream velocityFileStream(velocityFileName.c_str());
-  velocityFileStream << setprecision(precision)
-                     << *multiply(dx / dt,
-                                  *computeVelocity(lattice,
-                                                   lattice.getBoundingBox()));
-}
-
-T computePermeability(MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
-                      SinglePhaseFlowParam<T> const &flowParam) {
-  Box2D domain = lattice.getBoundingBox();
-  pluint nx = flowParam.getNx();
-  pluint ny = flowParam.getNy();
-  Box2D inlet(0, 0, 1, ny - 2);
-  Box2D outlet(nx - 1, nx - 1, 1, ny - 2);
-  T densityInlet = computeAverageDensity(lattice, inlet);
-  T densityOutlet = computeAverageDensity(lattice, outlet);
-  T deltaP = (densityInlet - densityOutlet) * DESCRIPTOR<T>::cs2;
-  PLOG(plog::debug) << "inlet average density: " << densityInlet
-                    << "; outlet average density: " << densityOutlet
-                    << "; delta pressure: " << deltaP;
-  std::unique_ptr<MultiScalarField2D<T>> velU =
-      computeVelocityComponent(lattice, domain, 0);
-  T meanUInlet = computeAverage(*velU, inlet);
-  T meanUOutlet = computeAverage(*velU, outlet);
-  T meanUDomain = computeAverage(*velU, domain);
-  PLOG(plog::debug) << "inlet average U: " << meanUInlet
-                    << "; outlet average U: " << meanUOutlet
-                    << "; domain average U: " << meanUDomain;
-  T permeability =
-      flowParam.getLatticeNu() * meanUDomain / (deltaP / (T)(nx - 1));
-  PLOG(plog::info) << "permeability: " << permeability;
-  return permeability;
-}
-
-std::string getCheckPointFile(const Param &param, pluint timeStep,
-                              pluint maxDigit = 8) {
+std::string
+getCheckPointFile(const SinglePhaseFlowCaseParam<T, DESCRIPTOR> &param,
+                  pluint timeStep, pluint maxDigit = 8) {
   std::string outputDir = param.outputDir;
   std::string filePath =
       outputDir + "/" +
@@ -300,9 +102,9 @@ int main(int argc, char **argv) {
           << " config.xml" << endl;
     return EXIT_FAILURE;
   }
-  Param param;
+  SinglePhaseFlowCaseParam<T, DESCRIPTOR> param;
   try {
-    param = Param(configXml);
+    param = SinglePhaseFlowCaseParam<T, DESCRIPTOR>(configXml);
   } catch (const PlbIOException &ex) {
     pcerr << "Invaid configuration xml, with error message: " << ex.what()
           << endl;
@@ -322,6 +124,8 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<Dynamics<T, DESCRIPTOR>> dynamics =
       param.lbmPara.getDynamics();
+  PLOG(plog::info) << "collision dynamics: "
+                   << util::getDynamicsName<T, DESCRIPTOR>(dynamics->getId());
   // lattice help release the dnamics pointer, therefore we need to clone
   // dynamics object to avoid duplicated deleting same pointer
   MultiBlockLattice2D<T, DESCRIPTOR> lattice(param.nx, param.ny,
