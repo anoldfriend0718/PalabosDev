@@ -4,9 +4,9 @@
     <!-- Valocity discretizazion -->
     <lbm> D2Q9 </lbm>
     <!-- Dynamics used for the simulation -->
-    <dynName> BGK_Ma2 </dynName>
+    <dynName> CHM </dynName>
     <!-- Relaxation of high-order moments (either SRT (BGK) or REG (1.0))-->
-    <hoOmega> SRT </hoOmega>
+    <hoOmega> REG </hoOmega>
 </lattice>
 
 <geometry>
@@ -41,7 +41,7 @@
     <!-- Directory where the output will be stored (must end with /) -->
     <output> ./tmp/ </output>
     <!--max physical time-->
-    <maxT> 5.01e-3 </maxT>
+    <maxT> 1.0e-3 </maxT>
     <!-- if writ out gif image-->
     <ifImSave>true</ifImSave>
     <!--image file save time step-->
@@ -72,7 +72,7 @@
 
 <init> 
     <!-- if load check point-->
-    <ifLoadCheckPoint>true</ifLoadCheckPoint>
+    <ifLoadCheckPoint>false</ifLoadCheckPoint>
     <!-- init time step-->
     <initStep>25000</initStep>
 </init>
