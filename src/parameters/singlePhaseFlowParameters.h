@@ -6,6 +6,7 @@
 #include "plog/Severity.h"
 #include <iostream>
 #include "libraryInterfaces/TINYXML_xmlIO.h"
+#include "basicDynamics/isoThermalDynamics.h"
 #include "parameters/LBMModelParser2D.h"
 
 namespace plb
