@@ -1,5 +1,6 @@
-#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.h"
+#include "basicDynamics/isoThermalDynamics.hh"
+#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "core/dynamicsIdentifiers.h"
 #include "core/globalDefs.h"
 #include "core/plbDebug.h"
@@ -17,9 +18,10 @@ template <typename T, template <typename U> class Descriptor>
 class LBMModelParser2D {
 public:
   LBMModelParser2D(DynamicsName dynamics, HOOmega hoOmega, T omega_)
-      : dynamicsName(dynamics),omega(omega_) {
+      : dynamicsName(dynamics), omega(omega_) {
     setDynamics(dynamics);
-  setOmega(hoOmega);
+    setOmega(hoOmega);
+    setAllHOOmega();
   }
 
   LBMModelParser2D() = default;
@@ -32,40 +34,6 @@ public:
 
   Array<T, Descriptor<T>::numRelaxationTimes> getAllOmega() const {
     return allOmega;
-  }
-
-  void setAllOmega()
-  {
-    switch (dynamicsName) {
-    case (BGK_Ma2):
-      BGKdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (RM):
-      RMdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (HM):
-      HMdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (CM):
-      CMdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (CHM):
-      CHMdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (GH):
-      GHdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (RR):
-      RRdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    case (K):
-      Kdynamics<T, Descriptor>::allOmega = allOmega;
-      break;
-    default:
-      PLOG(plog::error) << "Error: dynamics name does not exist." << std::endl;
-      exit(-1);
-      break;
-    }
   }
 
 private:
@@ -124,6 +92,39 @@ private:
     default:
       PLOG(plog::error) << "Error: high order omega catelog does not exist."
                         << std::endl;
+      exit(-1);
+      break;
+    }
+  }
+
+  void setAllHOOmega() {
+    switch (dynamicsName) {
+    case (BGK_Ma2):
+      // not high order omega for BGK_Ma2
+      break;
+    case (RM):
+      RMdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (HM):
+      HMdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (CM):
+      CMdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (CHM):
+      CHMdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (GH):
+      GHdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (RR):
+      RRdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    case (K):
+      Kdynamics<T, Descriptor>::allOmega = allOmega;
+      break;
+    default:
+      PLOG(plog::error) << "Error: dynamics name does not exist." << std::endl;
       exit(-1);
       break;
     }

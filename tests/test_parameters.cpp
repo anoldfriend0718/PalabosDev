@@ -1,9 +1,12 @@
+
 #include "palabos2D.h"
 #include "palabos2D.hh"
 #include "gtest/gtest.h"
 #include <plog/Severity.h>
 #include "parameters/singlePhaseFlowParameters.h"
 #include "parameters/LBMModelParser2D.h"
+#include "basicDynamics/isoThermalDynamics.h"
+#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 
 using namespace testing;
 using namespace plb;
@@ -86,7 +89,7 @@ TEST(LBMModelParameter, TestIfCorrectDynamicsCatelog) {
   ASSERT_EQ(getDynamicsName(lbmModel8), "RR");
 }
 
-TEST(LBMModelParameter,TestIfCorrectAllOmega)
+TEST(LBMModelParameter,TestIfGetCorrectAllOmega)
 {
   LBMModelParser2D<T, DESCRIPTOR> lbmModel1(CHM, SRT, 1.2);
   ASSERT_EQ(lbmModel1.getAllOmega()[0], 1.2);
@@ -99,5 +102,15 @@ TEST(LBMModelParameter,TestIfCorrectAllOmega)
   ASSERT_EQ(lbmModel2.getAllOmega()[1], 1.2);
   ASSERT_EQ(lbmModel2.getAllOmega()[2], 1.0);
   ASSERT_EQ(lbmModel2.getAllOmega()[3], 1.0);
+}
+
+TEST(LBMModelParameter,TestIfSetCorrectAllOmega)
+{
+  LBMModelParser2D<T, DESCRIPTOR> lbmModel2(CHM, REG, 1.2);
+  plb::Array<T,DESCRIPTOR<T>::numRelaxationTimes> allOmega = CHMdynamics<T, DESCRIPTOR>::allOmega;
+  ASSERT_EQ(allOmega[0], 1.2);
+  ASSERT_EQ(allOmega[1], 1.2);
+  ASSERT_EQ(allOmega[2], 1.0);
+  ASSERT_EQ(allOmega[3], 1.0);
 }
 // CHM, K, GH, RR

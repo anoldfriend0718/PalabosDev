@@ -102,11 +102,11 @@ struct Param {
     document["init"]["initStep"].read(initStep);
 
     string lbm;
-    DynamicsName dynName;
-    HOOmega hoOmega;
+    DynamicsName dynName=plb::BGK_Ma2;
+    HOOmega hoOmega=plb::SRT;
     document["lattice"]["lbm"].read(lbm);
-    document["lattice"]["dynName"].read(dynName);
-    document["lattice"]["hoOmega"].read(hoOmega);
+    // document["lattice"]["dynName"].read(dynName);
+    // document["lattice"]["hoOmega"].read(hoOmega);
     // TODO:add lbmParam here
     lbmPara =
         LBMModelParser2D<T, DESCRIPTOR>(dynName, hoOmega, flowParam.getOmega());
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<Dynamics<T, DESCRIPTOR>> dynamics =
       param.lbmPara.getDynamics();
-  param.lbmPara.setAllOmega();
+  
   MultiBlockLattice2D<T, DESCRIPTOR> lattice(param.nx, param.ny,
                                                       dynamics.get());
   boundarySetAndInit(lattice, param.flowParam, geometry);
