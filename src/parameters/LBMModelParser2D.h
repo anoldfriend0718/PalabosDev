@@ -1,6 +1,6 @@
-#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.h"
 #include "basicDynamics/isoThermalDynamics.hh"
+#include "basicDynamics/comprehensiveIsoThermalDynamics.h"
 #include "core/dynamicsIdentifiers.h"
 #include "core/globalDefs.h"
 #include "core/plbDebug.h"
@@ -142,10 +142,12 @@ private:
 
 template <typename T, template <typename U> class Descriptor>
 const std::map<std::string, DynamicsName>
-    LBMModelParser2D<T, Descriptor>::dynamicsNameMap = {{"BGK_Ma2", BGK_Ma2}};
+    LBMModelParser2D<T, Descriptor>::dynamicsNameMap = {
+        {"BGK_Ma2", BGK_Ma2}, {"RM", RM}, {"HM", HM}, {"CM", CM},
+        {"CHM", CHM},         {"K", K},   {"GH", GH}, {"RR", RR}};
 
 template <typename T, template <typename U> class Descriptor>
 const std::map<std::string, HOOmega>
-    LBMModelParser2D<T, Descriptor>::hoOmegaMap = {{"SRT", SRT}};
+    LBMModelParser2D<T, Descriptor>::hoOmegaMap = {{"SRT", SRT}, {"REG", REG}};
 
 } // namespace plb

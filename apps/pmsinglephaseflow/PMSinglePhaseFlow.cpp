@@ -102,12 +102,11 @@ struct Param {
     document["init"]["initStep"].read(initStep);
 
     string lbm;
-    DynamicsName dynName=plb::BGK_Ma2;
-    HOOmega hoOmega=plb::SRT;
+    string dynName;
+    string hoOmega;
     document["lattice"]["lbm"].read(lbm);
-    // document["lattice"]["dynName"].read(dynName);
-    // document["lattice"]["hoOmega"].read(hoOmega);
-    // TODO:add lbmParam here
+    document["lattice"]["dynName"].read(dynName);
+    document["lattice"]["hoOmega"].read(hoOmega);
     lbmPara =
         LBMModelParser2D<T, DESCRIPTOR>(dynName, hoOmega, flowParam.getOmega());
   }

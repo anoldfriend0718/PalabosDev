@@ -4,9 +4,9 @@
     <!-- Valocity discretizazion -->
     <lbm> D2Q9 </lbm>
     <!-- Dynamics used for the simulation -->
-    <dynName> 0 </dynName>
+    <dynName> BGK_Ma2 </dynName>
     <!-- Relaxation of high-order moments (either SRT (BGK) or REG (1.0))-->
-    <hoOmega> 0 </hoOmega>
+    <hoOmega> SRT </hoOmega>
 </lattice>
 
 <geometry>

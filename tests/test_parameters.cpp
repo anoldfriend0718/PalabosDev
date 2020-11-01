@@ -120,5 +120,14 @@ TEST(LBMModelParameter, TestIfCorrectConstructionByString)
   ASSERT_EQ(getDynamicsName(lbmModel1), "BGK");
   ASSERT_EQ(lbmModel1.getAllOmega()[0], 1.2);
 
+  LBMModelParser2D<T, DESCRIPTOR> lbmModel2("RR","REG",1.2);
+  ASSERT_EQ(getDynamicsName(lbmModel2), "RR");
+    plb::Array<T,DESCRIPTOR<T>::numRelaxationTimes> allOmega = RRdynamics<T, DESCRIPTOR>::allOmega;
+  ASSERT_EQ(allOmega[0], 1.2);
+  ASSERT_EQ(allOmega[1], 1.2);
+  ASSERT_EQ(allOmega[2], 1.0);
+  ASSERT_EQ(allOmega[3], 1.0);
+
+
 }
 // CHM, K, GH, RR
