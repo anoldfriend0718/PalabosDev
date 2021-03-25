@@ -21,7 +21,7 @@
     "clang-tidy.lintOnSave": false,
     "cmake.configureOnEdit": false,
     "cmake.configureSettings": {
-        "CMAKE_TOOLCHAIN_FILE": "/home/anoldfriend/Workspace/MyRepo/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "/home/aatrox/vcpkg/scripts/buildsystems/vcpkg.cmake"
     },
     "switcher.findSuffixOrder": [
         ".cpp",

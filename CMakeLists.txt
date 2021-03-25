@@ -12,7 +12,7 @@ enable_language(CXX)
 # This compiles Palabos library and all the examples
 # It is used mainly for Continuous Integration (CI)
 set(CI ON CACHE BOOL "Compile Everything (Continuous Integration)")
-set(PALABOS_SOURCE_REPO "/home/anoldfriend/Workspace/MyRepo/palabos")
+set(PALABOS_SOURCE_REPO "/home/aatrox/palabos")
 message("PALABOS_SOURCE_REPO:" ${PALABOS_SOURCE_REPO})
 set(CUSTOMIZED_PARABOS_SOURCE_REPO ${CMAKE_SOURCE_DIR})
 message("CUSTOMIZED_PARABOS_SOURCE_REPO: " ${CUSTOMIZED_PARABOS_SOURCE_REPO})
