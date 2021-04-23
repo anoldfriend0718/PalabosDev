@@ -9,3 +9,5 @@
 
 /vcpkg_installed
 */.ipynb_checkpoints/
+apps/cylinder2d/lyz_guo_cylinder2d.cpp
+.gitignore

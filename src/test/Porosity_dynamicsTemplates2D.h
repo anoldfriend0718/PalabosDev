@@ -6,6 +6,7 @@
 #include "core/globalDefs.h"
 #include "latticeBoltzmann/nearestNeighborLattices2D.h"
 #include "latticeBoltzmann/geometricOperationTemplates.h"
+#include "test/Porosity_dynamics.h"
 
 namespace plb {
 

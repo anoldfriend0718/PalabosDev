@@ -26,6 +26,7 @@
 
 #include "test/Porosity_dynamicsTemplates.h"
 #include "test/Porosity_dynamicsTemplates2D.h"
+#include "test/Porosity_dynamics.h"
 
 namespace plb {
 

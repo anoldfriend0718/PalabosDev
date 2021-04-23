@@ -5,6 +5,7 @@
 #include "core/cell.h"
 #include "core/util.h"
 #include "latticeBoltzmann/offEquilibriumTemplates.h"
+#include "test/Porosity_dynamics.h"
 
 namespace plb {
 
