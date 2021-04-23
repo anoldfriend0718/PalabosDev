@@ -1,36 +1,3 @@
-/* This file is part of the Palabos library.
- *
- * The Palabos softare is developed since 2011 by FlowKit-Numeca Group Sarl
- * (Switzerland) and the University of Geneva (Switzerland), which jointly
- * own the IP rights for most of the code base. Since October 2019, the
- * Palabos project is maintained by the University of Geneva and accepts
- * source code contributions from the community.
- *
- * Contact:
- * Jonas Latt
- * Computer Science Department
- * University of Geneva
- * 7 Route de Drize
- * 1227 Carouge, Switzerland
- * jonas.latt@unige.ch
- *
- * The most recent release of Palabos can be downloaded at
- * <https://palabos.unige.ch/>
- *
- * The library Palabos is free software: you can redistribute it and/or
- * modify it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * The library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 /** \file
  * Flow around a 2D cylinder inside a channel, with the creation of a von
  * Karman vortex street. This example makes use of bounce-back nodes to
@@ -45,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+
 
 using namespace plb;
 using namespace plb::descriptors;
@@ -237,6 +205,19 @@ int main(int argc, char *argv[]) {
   MultiBlockLattice2D<T, DESCRIPTOR> lattice(
       parameters.getNx(), parameters.getNy(),
       new BGKdynamics<T, DESCRIPTOR>(parameters.getOmega()));
+
+
+/*
+	for (int i = (-20+parameters.getNx()/2); i < (20+parameters.getNx()/2); ++i)
+	{
+		for (int j = (-20+parameters.getNy()/2); j < (20+parameters.getNy()/2); ++j)
+		{
+			if (pow(i-50,2)+pow(j-50,2)<=400)
+			    lattice.get(i,j).getDynamics().setOmega(1);
+			else
+			    lattice.get(i,j).getDynamics().setOmega(0.5);
+		}
+	}*/
 
   OnLatticeBoundaryCondition2D<T, DESCRIPTOR> *boundaryCondition =
       createLocalBoundaryCondition2D<T, DESCRIPTOR>();
