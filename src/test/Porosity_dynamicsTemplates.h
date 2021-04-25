@@ -65,7 +65,7 @@ static T Porosity_bgk_collision(Array<T,Descriptor::q>& f, T rhoBar, Array<T,Des
     const T jSqr = VectorTemplateImpl<T,Descriptor::d>::normSqr(j);
     for (plint iPop=0; iPop < Descriptor::q; ++iPop) {
         f[iPop] *= (T)1-omega;
-        f[iPop] += omega * dynamicsTemplatesImpl<T,Descriptor>::Porosity_bgk_equilibrium (
+        f[iPop] += omega * Porosity_dynamicsTemplatesImpl<T,Descriptor>::Porosity_bgk_equilibrium (
                                 iPop, rhoBar, invRho, j, jSqr, porosity );
     }
     return jSqr*invRho*invRho;

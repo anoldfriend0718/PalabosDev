@@ -11,3 +11,4 @@
 */.ipynb_checkpoints/
 apps/cylinder2d/lyz_guo_cylinder2d.cpp
 .gitignore
+tests/mass transfer function.cpp
