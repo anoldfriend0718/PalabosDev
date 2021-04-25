@@ -16,7 +16,7 @@ template<typename T> struct Porosity_dynamicsTemplatesImpl<T, descriptors::D2Q9D
 typedef descriptors::D2Q9DescriptorBase<T> D;
 
 static T Porosity_bgk_equilibrium(plint iPop, T rhoBar, T invRho, Array<T,2> const& j, T jSqr, T porosity ) {
-    typedef descriptors::D2Q9DescriptorBase<T> L;
+    typedef descriptors::D2Q9DescriptorBase<T> L; //XQH comment : 没有必要再定义一个别名
     T c_j = L::c[iPop][0]*j[0] + L::c[iPop][1]*j[1];
     return L::t[iPop] * ( rhoBar +
                (T)3*c_j + invRho/porosity*(4.5*c_j*c_j - 1.5*jSqr) );
@@ -27,7 +27,7 @@ static void Porosity_bgk_equilibria( T rhoBar, T invRho, Array<T,D::d> const& j,
                                 T jSqr, Array<T,D::q>& eqPop, T porosity )
 {
     T t0 = D::t[0];
-    T t1 = D::t[1];
+    T t1 = D::t[1]; 
     T t2 = D::t[2];
 
     T kx     = (T)3 * j[0];
