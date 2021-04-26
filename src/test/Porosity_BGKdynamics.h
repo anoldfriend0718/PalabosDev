@@ -24,7 +24,7 @@
 #include "latticeBoltzmann/indexTemplates.h"
 #include "multiGrid/multiGridUtil.h"
 
-#include "test/Porosity_dynamicsTemplates.h"
+#include "test/Porosity_dynamicsTemplates.h" //XQH comment: test is a bad name
 #include "test/Porosity_dynamicsTemplates2D.h"
 #include "test/Porosity_dynamics.h"
 
