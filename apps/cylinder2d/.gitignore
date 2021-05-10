@@ -4,6 +4,9 @@ guocylinder2d
 
 temp*
 **/tmp*
+**/validation_poiseuille_*
+**/validation_cylinder2d_*
+validation_poiseuille
 
 lyz_guo_cylinder2d
 

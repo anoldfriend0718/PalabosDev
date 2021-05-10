@@ -6,7 +6,8 @@
 #include "core/globalDefs.h"
 #include "latticeBoltzmann/nearestNeighborLattices2D.h"
 #include "latticeBoltzmann/geometricOperationTemplates.h"
-#include "test/Porosity_dynamics.h"
+
+#include "Porosity_addDynamicParams.h"
 
 namespace plb {
 
@@ -69,7 +70,7 @@ static void Porosity_bgk_equilibria( T rhoBar, T invRho, Array<T,D::d> const& j,
 }
 
 
-static T Porosity_bgk_collision_base(Array<T,D::q>& f, T rhoBar, Array<T,2> const& j, T omega, T invRho, T porosity ) {
+static T Porosity_bgk_collision_base(Array<T,D::q>& f, T rhoBar, Array<T,2> const& j, T omega, T invRho, T porosity) {
     T one_m_omega = (T)1 - omega;
     T t0_omega = D::t[0] * omega;
     T t1_omega = D::t[1] * omega;
@@ -113,12 +114,12 @@ static T Porosity_bgk_collision_base(Array<T,D::q>& f, T rhoBar, Array<T,2> cons
     f[4] *= one_m_omega; f[4] += t2_omega * (C1+C2+C3);
     f[8] *= one_m_omega; f[8] += t2_omega * (C1-C2+C3);
 
+
     return invRho*invRho*jSqr;
 }
 
 
-
-static T Porosity_bgk_collision(Array<T,D::q>& f, T rhoBar, Array<T,2> const& j, T omega, T porosity) {
+static T Porosity_bgk_collision(Array<T,D::q>& f, T rhoBar, Array<T,2> const& j, T omega, T porosity ) {
     return Porosity_bgk_collision_base(f, rhoBar, j, omega, D::invRho(rhoBar), porosity);
 }
 

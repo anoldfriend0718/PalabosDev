@@ -13,6 +13,10 @@ namespace plb {
 namespace dynamicParams {
     //porosity for Porosity_BGKdynamics
     const plint porosity = 1;
+    //KVC = Kinematic viscosity coefficient
+    const plint KVC = 1;
+    //k0 is the coefficient of the permeability K
+    const plint k0 = 1;
 }
 
 }  // namespace plb

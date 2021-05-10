@@ -1,50 +1,3 @@
-/* This file is part of the Palabos library.
- *
- * The Palabos softare is developed since 2011 by FlowKit-Numeca Group Sarl
- * (Switzerland) and the University of Geneva (Switzerland), which jointly
- * own the IP rights for most of the code base. Since October 2019, the
- * Palabos project is maintained by the University of Geneva and accepts
- * source code contributions from the community.
- * 
- * Contact:
- * Jonas Latt
- * Computer Science Department
- * University of Geneva
- * 7 Route de Drize
- * 1227 Carouge, Switzerland
- * jonas.latt@unige.ch
- *
- * The most recent release of Palabos can be downloaded at 
- * <https://palabos.unige.ch/>
- *
- * The library Palabos is free software: you can redistribute it and/or
- * modify it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * The library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/** \file
- * Implementation of a stationary, pressure-driven 2D channel flow, and
- * comparison with the analytical Poiseuille profile. The velocity is initialized
- * to zero, and converges only slowly to the expected parabola. This application
- * illustrates a full production cycle in a CFD application, ranging from
- * the creation of a geometry and definition of boundary conditions over the
- * program execution to the evaluation of results and production of instantaneous
- * graphical snapshots. From a technical standpoint, this showcase is not
- * trivial: it implements for example hypbrid velocity/pressure boundaries, 
- * and uses an analytical profile to set up the boundary and initial conditions,
- * and to compute the error. As a first Palabos example, you might prefer to 
- * look at a more straightforward code, such as cavity2d.
- **/
- 
 #include "palabos2D.h"
 #include "palabos2D.hh"
 #include <vector>
@@ -53,10 +6,16 @@
 #include <fstream>
 #include <iomanip>
 
-#include "test/Porosity_BGKdynamics.h"
-#include "test/Porosity_dynamicsTemplates.h"
-#include "test/Porosity_dynamicsTemplates2D.h"
-#include "test/Porosity_dynamics.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_BGKdynamics.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_BGKdynamics.hh"
+#include "Guo_Dynamics_with_Porosity/Porosity_dynamicsTemplates.h" 
+#include "Guo_Dynamics_with_Porosity/Porosity_dynamicsTemplates2D.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_addDynamicParams.h"
+
+#include "Guo_Dynamics_with_Porosity/Porosity_externalForceDynamics.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_externalForceDynamics.hh" 
+#include "Guo_Dynamics_with_Porosity/Porosity_externalForceTemplates.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_externalForceTemplates2D.h"
 
 using namespace plb;
 using namespace plb::descriptors;
@@ -64,6 +23,38 @@ using namespace std;
 
 typedef double T;
 #define DESCRIPTOR D2Q9Descriptor
+
+void writeField(const string outputDir,
+                MultiBlockLattice2D<T, DESCRIPTOR> &lattice,
+                IncomprFlowParam<T> const &parameters, plint iter,
+                plint maxdigit = 6) {
+  T dx = parameters.getDeltaX();
+  T dt = parameters.getDeltaT();
+  int precision = 6;
+  // density
+  const string densityFileName =
+      outputDir + createFileName("density", iter, 6) + ".dat";
+  plb_ofstream densityFileStream(densityFileName.c_str());
+  densityFileStream << setprecision(precision)
+                    << *computeDensity(lattice, lattice.getBoundingBox());
+  // velocity norm
+  const string velocityNormFileName =
+      outputDir + createFileName("velocityNorm", iter, maxdigit) + ".dat";
+  plb_ofstream velocityNormFileStream(velocityNormFileName.c_str());
+  velocityNormFileStream << setprecision(precision)
+                         << *multiply(dx / dt,
+                                      *computeVelocityNorm(
+                                          lattice, lattice.getBoundingBox()));
+  // velocity components
+  const string velocityFileName =
+      outputDir + createFileName("velocity", iter, maxdigit) + ".dat";
+  plb_ofstream velocityFileStream(velocityFileName.c_str());
+  velocityFileStream << setprecision(precision)
+                     << *multiply(dx / dt,
+                                  *computeVelocity(lattice,
+                                                   lattice.getBoundingBox()));
+}
+
 
 /// Velocity on the parabolic Poiseuille profile
 T poiseuilleVelocity(plint iY, IncomprFlowParam<T> const& parameters) {
@@ -184,7 +175,6 @@ void channelSetup( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
            lattice, lattice.getBoundingBox(),
            PoiseuilleDensityAndZeroVelocity<T>(parameters) );
 
-    // Call initialize to get the lattice ready for the simulation.
     lattice.initialize();
 }
 
@@ -230,17 +220,21 @@ T computeRMSerror ( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
 int main(int argc, char* argv[]) {
     plbInit(&argc, &argv);
 
-    global::directories().setOutputDir("./tmp_poiseuille/");
+    global::directories().setOutputDir("./validation_poiseuille_porosity=1/");
 
     IncomprFlowParam<T> parameters(
             (T) 2e-2,  // uMax
-            (T) 5.,    // Re:0.01_100
+            (T) 5,    // Re:0.01_100,5
             60,        // N
             3.,        // lx
             1.         // ly 
     );
-    const T logT     = (T)0.1;
-    const T imSave   = (T)0.5;
+    T porosity = 1;//porosity can not = 1
+    T KVC      = ((T)1/(T)3)* (parameters.getTau()-(T)0.5);//注意粘性系数与tau之间的关系
+    T k0       = 1;//.e-12;应该单位换算之后取格子单位
+
+    const T logT     = (T)0.01;
+    const T imSave   = (T)0.01;
     const T vtkSave  = (T)2.;
     const T maxT     = (T)15.1;
     // Change this variable to "pressure" if you prefer a pressure boundary
@@ -251,20 +245,9 @@ int main(int argc, char* argv[]) {
 
     MultiBlockLattice2D<T, DESCRIPTOR> lattice (
               parameters.getNx(), parameters.getNy(),
-              new Porosity_BGKdynamics<T,DESCRIPTOR>(parameters.getOmega(),0.1) );
- /*   
-    for (int i = (-20+parameters.getNx()/2); i < (20+parameters.getNx()/2); ++i)
-	{
-		for (int j = (-20+parameters.getNy()/2); j < (20+parameters.getNy()/2); ++j)
-		{
-			if (pow(i-parameters.getNy()/2,2)+pow(j-parameters.getNy(),2)<=400)
-			    lattice.get(i,j).getDynamics().setParameter(dynamicParams::porosity,0.0001);
-			else
-			    lattice.get(i,j).getDynamics().setParameter(dynamicParams::porosity,0.5);
-		}
-	}
-*/ 
-
+              //new Porosity_BGKdynamics<T,DESCRIPTOR>(parameters.getOmega(),0.9) );
+              new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(parameters.getOmega(),porosity, KVC, k0) );
+    
     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
         boundaryCondition = createLocalBoundaryCondition2D<T,DESCRIPTOR>();
 
@@ -280,6 +263,11 @@ int main(int argc, char* argv[]) {
         if (iT%parameters.nStep(vtkSave)==0 && iT>0) {
             pcout << "Saving VTK file ..." << endl;
             writeVTK(lattice, parameters, iT);
+        }
+
+        if (iT%parameters.nStep(vtkSave)==0 && iT>0) {
+            pcout << "Saving field text file..." << endl;
+            writeField("./tmp_poiseuille/", lattice, parameters, iT);
         }
 
         if (iT%parameters.nStep(logT)==0) {

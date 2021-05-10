@@ -5,7 +5,8 @@
 #include "core/cell.h"
 #include "core/util.h"
 #include "latticeBoltzmann/offEquilibriumTemplates.h"
-#include "test/Porosity_dynamics.h"
+
+#include "Porosity_addDynamicParams.h"
 
 namespace plb {
 
@@ -68,6 +69,7 @@ static T Porosity_bgk_collision(Array<T,Descriptor::q>& f, T rhoBar, Array<T,Des
         f[iPop] += omega * Porosity_dynamicsTemplatesImpl<T,Descriptor>::Porosity_bgk_equilibrium (
                                 iPop, rhoBar, invRho, j, jSqr, porosity );
     }
+
     return jSqr*invRho*invRho;
 }
 
@@ -76,6 +78,7 @@ static T Porosity_bgk_collision(Array<T,Descriptor::q>& f, T rhoBar, Array<T,Des
 
 }  // namespace plb
 
-#include "test/Porosity_dynamicsTemplates2D.h"
+#include "Guo_Dynamics_with_Porosity/Porosity_dynamicsTemplates2D.h"
+
 
 #endif  // POROSITY_DYNAMICS_TEMPLATES_H
