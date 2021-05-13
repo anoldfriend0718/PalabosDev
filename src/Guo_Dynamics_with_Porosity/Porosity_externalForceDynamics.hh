@@ -196,7 +196,7 @@ void Porosity_GuoExternalForceBGKdynamics<T,Descriptor>::computeVelocity (
         Cell<T,Descriptor> const& cell, Array<T,Descriptor<T>::d>& u) const
 {
     T rhoBar;
-    Array<T,Descriptor<T>::d> j;
+    Array<T,Descriptor<T>::d> v,j;
     momentTemplates<T,Descriptor>::get_rhoBar_j(cell,rhoBar, j);
     
     T porosity= this->getPorosity();
@@ -209,7 +209,6 @@ void Porosity_GuoExternalForceBGKdynamics<T,Descriptor>::computeVelocity (
     T c0 = ((T)1 + porosity * KVC * invK / (T)2 ) / (T)2;
     T c1 = (porosity * Fp * pow(invK,0.5)) / (T)2;
     
-    T v[2];
     for (plint iD = 0; iD < Descriptor<T>::d; ++iD)
     {
         v[iD] = j[iD]*invRho;

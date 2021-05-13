@@ -87,35 +87,15 @@ private:
     IncomprFlowParam<T> parameters;
 };
 
-/// A functional, used to instantiate bounce-back nodes at the locations of the cylinder
-template<typename T>
-class CylinderShapeDomain2D : public plb::DomainFunctional2D {
-public:
-    CylinderShapeDomain2D(plb::plint cx_, plb::plint cy_, plb::plint radius)
-        : cx(cx_),
-          cy(cy_),
-          radiusSqr(plb::util::sqr(radius))
-    { }
-    virtual bool operator() (plb::plint iX, plb::plint iY) const {
-        return plb::util::sqr(iX-cx) + plb::util::sqr(iY-cy) <= radiusSqr;
-    }
-    virtual CylinderShapeDomain2D<T>* clone() const {
-        return new CylinderShapeDomain2D<T>(*this);
-    }
-private:
-    plb::plint cx;
-    plb::plint cy;
-    plb::plint radiusSqr;
-};
-
-
 void cylinderSetup( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
                     IncomprFlowParam<T> const& parameters,
                     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition,
                     T omega,
-                    T solidporosity,
+                    T rockporosity,
+                    T cokeporosity,
                     T KVC,
-                    T k0 )
+                    T k0 ,
+                    MultiScalarField2D<int> boolMask)
 {
     const plint nx = parameters.getNx();
     const plint ny = parameters.getNy();
@@ -143,14 +123,9 @@ void cylinderSetup( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
             lattice, lattice.getBoundingBox(),
             PoiseuilleVelocityAndDensity<T>(parameters) );
 
-    plint cx     = nx/4;
-    plint cy     = ny/2; // cy is slightly offset to avoid full symmetry,
-                          //   and to get a Von Karman Vortex street.
-    plint radius = cy/4;
-    
-    defineDynamics(lattice, lattice.getBoundingBox(),
-                   new CylinderShapeDomain2D<T>(cx,cy,radius),
-                   new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(omega,solidporosity, KVC, k0));
+    defineDynamics(lattice, boolMask, new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(omega,rockporosity, KVC, k0), 2);
+    defineDynamics(lattice, boolMask, new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(omega,cokeporosity, KVC, k0), 3);
+
     //pcout << "3" << endl;
     lattice.initialize();
 }
@@ -192,35 +167,42 @@ T computeRMSerror ( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
 int main(int argc, char* argv[]) 
 {
     plbInit(&argc, &argv);
-    auto outputdir = "./validation_cylinder2d_porosity=1,0.01/";
+    auto outputdir = "./tmp/";
     global::directories().setOutputDir(outputdir);
 
     IncomprFlowParam<T> parameters(
             (T) 1e-2,  // uMax
             (T) 5,  // Re
-            100,       // N
-            6.,        // lx
-            1.         // ly 
+            100,        // N
+            3.39,        // lx
+            1.49         // ly 
     );
-    T porosity = 1;//porosity can not = 0 (invK 必须有意义)
+    
     T KVC      = ((T)1/(T)3)* (parameters.getTau()-(T)0.5);//注意粘性系数与tau之间的关系
     T k0       = 1;//.e-12;应该单位换算之后取格子单位
-    T solidporosity = 0.01;
+    T rockporosity = 0.01;//porosity can not = 0 (invK 必须有意义)
+    T cokeporosity = 0.7;
+
     const T logT     = (T)0.02;
-    const T imSave   = (T)0.06;
+    const T imSave   = (T)0.01;
     const T vtkSave  = (T)0.5;
     const T maxT     = (T)50.1;
     pcout << parameters.getTau() << endl;
+    pcout << parameters.getNx() << endl;
+    pcout << parameters.getNy() << endl;
     writeLogFile(parameters, "Poiseuille flow");
 
-    MultiBlockLattice2D<T, DESCRIPTOR> lattice (
-            parameters.getNx(), parameters.getNy(),
-            new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(parameters.getOmega(),porosity, KVC, k0) );
+    MultiBlockLattice2D<T, DESCRIPTOR> lattice (parameters.getNx(), parameters.getNy(),
+            new Porosity_GuoExternalForceBGKdynamics<T,DESCRIPTOR>(parameters.getOmega(),1, KVC, k0) );
     
     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
         boundaryCondition = createLocalBoundaryCondition2D<T,DESCRIPTOR>();
     
-    cylinderSetup(lattice, parameters, *boundaryCondition, parameters.getOmega(), solidporosity, KVC, k0);
+    MultiScalarField2D<int> boolMask(parameters.getNx(), parameters.getNy());  
+    plb_ifstream ifile("tiny_structure.txt");
+    ifile >> boolMask;
+
+    cylinderSetup(lattice, parameters, *boundaryCondition, parameters.getOmega(), rockporosity, cokeporosity, KVC, k0, boolMask);
     
     // Main loop over time iterations.
     for (plint iT=0; iT*parameters.getDeltaT()<maxT; ++iT) {
@@ -264,3 +246,4 @@ int main(int argc, char* argv[])
     
     delete boundaryCondition;
 }
+

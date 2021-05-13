@@ -132,6 +132,8 @@ cmake_policy(SET CMP0079 NEW)
 
 add_subdirectory(apps/cylinder2d)
 add_subdirectory(apps/pmsinglephaseflow)
+add_subdirectory(apps/pore_rock_coke)
+
 
 enable_testing()
 add_subdirectory(tests)

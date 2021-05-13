@@ -219,8 +219,8 @@ T computeRMSerror ( MultiBlockLattice2D<T,DESCRIPTOR>& lattice,
 
 int main(int argc, char* argv[]) {
     plbInit(&argc, &argv);
-
-    global::directories().setOutputDir("./validation_poiseuille_porosity=1/");
+    auto outputdir = "./tmp/";
+    global::directories().setOutputDir(outputdir);
 
     IncomprFlowParam<T> parameters(
             (T) 2e-2,  // uMax
@@ -229,9 +229,12 @@ int main(int argc, char* argv[]) {
             3.,        // lx
             1.         // ly 
     );
-    T porosity = 1;//porosity can not = 1
+    T porosity = 0.1;//porosity can not = 0
+    //T Da       = 1e-5;
     T KVC      = ((T)1/(T)3)* (parameters.getTau()-(T)0.5);//注意粘性系数与tau之间的关系
-    T k0       = 1;//.e-12;应该单位换算之后取格子单位
+    T k0       = (T)1;
+    //(150*Da*KVC*KVC*parameters.getRe()*parameters.getRe()*(1-porosity)*(1-porosity))/(parameters.getPhysicalU()*parameters.getPhysicalU()*(T)1.75*(T)1.75);//1;//.e-12;应该单位换算之后取格子单位
+    //pcout << k0 << endl;
 
     const T logT     = (T)0.01;
     const T imSave   = (T)0.01;
@@ -265,9 +268,9 @@ int main(int argc, char* argv[]) {
             writeVTK(lattice, parameters, iT);
         }
 
-        if (iT%parameters.nStep(vtkSave)==0 && iT>0) {
+        if (iT%parameters.nStep(imSave)==0 && iT>0) {
             pcout << "Saving field text file..." << endl;
-            writeField("./tmp_poiseuille/", lattice, parameters, iT);
+            writeField(outputdir, lattice, parameters, iT);
         }
 
         if (iT%parameters.nStep(logT)==0) {
